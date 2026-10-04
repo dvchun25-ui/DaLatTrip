@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "94721516352",
+    "project_id": "dalattrip-8c1d2",
+    "storage_bucket": "dalattrip-8c1d2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94721516352:android:90778a96e76c3e036050a5",
+        "android_client_info": {
+          "package_name": "com.example.dalattrip"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "94721516352-ea9e4nfve6rldlb8pvjs1hlk2ma80f7i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEOwS9cjtyHsvM3H0OzGjiJ40FTlLCTl8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "94721516352-ea9e4nfve6rldlb8pvjs1hlk2ma80f7i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
