@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../widgets/auth_button.dart';
 import 'login_screen.dart';
@@ -20,25 +21,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Lên kế hoạch\nchuyến đi thông minh',
       description:
           'Gợi ý địa điểm phù hợp, tối ưu lịch trình\nvà chi phí theo sở thích của bạn',
-      card1: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=500&q=80',
-      card2: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=500&q=80',
-      card3: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=500&q=80',
+      card1:
+          'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=500&q=80',
+      card2:
+          'https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=500&q=80',
+      card3:
+          'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=500&q=80',
     ),
     const OnboardingItem(
       title: 'Khám phá quán cà phê\nvà homestay cực chill',
       description:
           'Hàng trăm điểm check-in sương mù đồi thông\nđang chờ bạn khám phá',
-      card1: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=500&q=80',
-      card2: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=500&q=80',
-      card3: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=500&q=80',
+      card1:
+          'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=500&q=80',
+      card2:
+          'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=500&q=80',
+      card3:
+          'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=500&q=80',
     ),
     const OnboardingItem(
       title: 'Trải nghiệm trọn vẹn\ncùng người thân yêu',
       description:
           'Tối ưu từng khoảnh khắc đáng nhớ\ntrong chuyến du lịch Đà Lạt của bạn',
-      card1: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=500&q=80',
-      card2: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=500&q=80',
-      card3: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=500&q=80',
+      card1:
+          'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=500&q=80',
+      card2:
+          'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=500&q=80',
+      card3:
+          'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=500&q=80',
     ),
   ];
 
@@ -53,10 +63,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _navigateToLogin() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+  Future<void> _navigateToLogin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_seen_onboarding', true);
+    } catch (_) {}
+    if (!mounted) return;
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   @override
@@ -70,17 +85,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFBF9),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            const SizedBox(height: 8),
+            Column(
+              children: [
+                // Space for top bar
+                const SizedBox(height: 36),
 
-            // Stacked Cards Carousel
-            Expanded(
-              flex: 11,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _pages.length,
-                onPageChanged: (index) => setState(() => _currentPage = index),
+                // Stacked Cards Carousel
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: _pages.length,
+                    onPageChanged: (index) => setState(() => _currentPage = index),
                 itemBuilder: (context, index) {
                   final item = _pages[index];
                   return Column(
@@ -211,8 +228,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
         ),
-      ),
-    );
+
+        // Skip Button Positioned Top-Right
+        Positioned(
+          top: 6,
+          right: 16,
+          child: TextButton(
+            onPressed: _navigateToLogin,
+            child: const Text(
+              'Bỏ qua',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+);
   }
 
   Widget _buildPolaroidCard({

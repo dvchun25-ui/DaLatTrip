@@ -1,19 +1,34 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
+import '../controllers/create_trip_controller.dart';
 import 'preferences_screen.dart';
 
 /// Screen 3: Tạo chuyến đi / Nhập thông tin chuyến đi
 class CreateTripScreen extends StatefulWidget {
-  const CreateTripScreen({super.key});
+  final CreateTripController? controller;
+
+  const CreateTripScreen({super.key, this.controller});
 
   @override
   State<CreateTripScreen> createState() => _CreateTripScreenState();
 }
 
 class _CreateTripScreenState extends State<CreateTripScreen> {
-  int _peopleCount = 2;
-  double _budget = 5000000;
-  String _transport = 'Xe máy';
+  late final CreateTripController _controller;
+  late final bool _ownsController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? CreateTripController();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsController) _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +81,10 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                   _buildSectionTitle('Địa điểm'),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF7FAF8),
                       borderRadius: BorderRadius.circular(12),
@@ -74,7 +92,11 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                     ),
                     child: Row(
                       children: const [
-                        Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
+                        Icon(
+                          Icons.location_on_outlined,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                         SizedBox(width: 10),
                         Text(
                           'Đà Lạt, Lâm Đồng',
@@ -96,7 +118,10 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                     children: [
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF7FAF8),
                             borderRadius: BorderRadius.circular(12),
@@ -104,11 +129,18 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                           ),
                           child: Row(
                             children: const [
-                              Icon(Icons.calendar_today_outlined, color: AppColors.primary, size: 18),
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                color: AppColors.primary,
+                                size: 18,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 '3 ngày 2 đêm',
-                                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
@@ -117,7 +149,10 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF7FAF8),
                             borderRadius: BorderRadius.circular(12),
@@ -125,11 +160,18 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                           ),
                           child: Row(
                             children: const [
-                              Icon(Icons.event_note_outlined, color: AppColors.primary, size: 18),
+                              Icon(
+                                Icons.event_note_outlined,
+                                color: AppColors.primary,
+                                size: 18,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 '15/12 - 17/12',
-                                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
@@ -143,7 +185,10 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                   _buildSectionTitle('Số người'),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF7FAF8),
                       borderRadius: BorderRadius.circular(12),
@@ -154,25 +199,40 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.people_alt_outlined, color: AppColors.primary, size: 20),
+                            const Icon(
+                              Icons.people_alt_outlined,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
                             const SizedBox(width: 10),
                             Text(
-                              '$_peopleCount người',
-                              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+                              '${_controller.people} người',
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
                         Row(
                           children: [
                             IconButton(
-                              onPressed: _peopleCount > 1
-                                  ? () => setState(() => _peopleCount--)
+                              onPressed: _controller.people > 1
+                                  ? () => setState(
+                                      () => _controller.setPeople(
+                                        _controller.people - 1,
+                                      ),
+                                    )
                                   : null,
                               icon: const Icon(Icons.remove_circle_outline),
                               color: AppColors.primary,
                             ),
                             IconButton(
-                              onPressed: () => setState(() => _peopleCount++),
+                              onPressed: () => setState(
+                                () => _controller.setPeople(
+                                  _controller.people + 1,
+                                ),
+                              ),
                               icon: const Icon(Icons.add_circle_outline),
                               color: AppColors.primary,
                             ),
@@ -207,7 +267,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                               ),
                             ),
                             Text(
-                              '${_budget.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} VNĐ',
+                              '${_controller.totalBudget.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} VNĐ',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -222,16 +282,18 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                             activeTrackColor: AppColors.primary,
                             inactiveTrackColor: AppColors.mintBadge,
                             thumbColor: AppColors.primary,
-                            overlayColor: AppColors.primary.withValues(alpha: 0.1),
+                            overlayColor: AppColors.primary.withValues(
+                              alpha: 0.1,
+                            ),
                           ),
                           child: Slider(
-                            value: _budget,
+                            value: _controller.totalBudget.toDouble(),
                             min: 1000000,
                             max: 10000000,
                             divisions: 18,
                             onChanged: (val) {
                               setState(() {
-                                _budget = val;
+                                _controller.setTotalBudget(val.toInt());
                               });
                             },
                           ),
@@ -239,8 +301,20 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: const [
-                            Text('1 triệu', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                            Text('10 triệu', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            Text(
+                              '1 triệu',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            Text(
+                              '10 triệu',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -253,11 +327,19 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _buildTransportOption('Xe máy', Icons.two_wheeler),
+                      _buildTransportOption(
+                        'Xe máy',
+                        'motorbike',
+                        Icons.two_wheeler,
+                      ),
                       const SizedBox(width: 10),
-                      _buildTransportOption('Ô tô', Icons.directions_car),
+                      _buildTransportOption(
+                        'Ô tô',
+                        'car',
+                        Icons.directions_car,
+                      ),
                       const SizedBox(width: 10),
-                      _buildTransportOption('Xe khách', Icons.directions_bus),
+                      _buildTransportOption('Taxi', 'taxi', Icons.local_taxi),
                     ],
                   ),
                 ],
@@ -283,9 +365,17 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
+                  final error = _controller.validateTripDetails();
+                  if (error != null) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(error)));
+                    return;
+                  }
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const PreferencesScreen(),
+                      builder: (_) =>
+                          PreferencesScreen(controller: _controller),
                     ),
                   );
                 },
@@ -299,10 +389,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                 ),
                 child: const Text(
                   'Tiếp tục',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
@@ -367,15 +454,17 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
     );
   }
 
-  Widget _buildTransportOption(String label, IconData icon) {
-    final isSelected = _transport == label;
+  Widget _buildTransportOption(String label, String value, IconData icon) {
+    final isSelected = _controller.transport == value;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _transport = label),
+        onTap: () => setState(() => _controller.setTransport(value)),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFE8F2EC) : const Color(0xFFF7FAF8),
+            color: isSelected
+                ? const Color(0xFFE8F2EC)
+                : const Color(0xFFF7FAF8),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? AppColors.primary : AppColors.border,

@@ -1,15 +1,91 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
+import '../../../core/utils/category_mapper.dart';
+import '../../../domain/entities/place.dart';
 import '../../../models/travel_models.dart';
+import '../../places/widgets/place_image.dart';
+
+class _PlaceDetailData {
+  final Place domainPlace;
+  final String title;
+  final String ratingLabel;
+  final String reviewCount;
+  final String category;
+  final String price;
+  final String distance;
+  final String description;
+  final bool isFavorite;
+
+  const _PlaceDetailData({
+    required this.domainPlace,
+    required this.title,
+    required this.ratingLabel,
+    required this.reviewCount,
+    required this.category,
+    required this.price,
+    required this.distance,
+    required this.description,
+    required this.isFavorite,
+  });
+
+  factory _PlaceDetailData.fromLegacy(PlaceItem place) {
+    final domainPlace = Place(
+      id: place.id,
+      name: place.title,
+      categories: [CategoryMapper.normalize(place.category) ?? 'checkin'],
+      description: place.description,
+      priceMin: 0,
+      priceMax: 0,
+      visitDurationMinutes: 90,
+      rating: place.rating,
+      indoor: false,
+      imageUrl: place.image,
+    );
+    return _PlaceDetailData(
+      domainPlace: domainPlace,
+      title: place.title,
+      ratingLabel: place.rating.toStringAsFixed(1),
+      reviewCount: place.reviewCount,
+      category: place.category,
+      price: place.price,
+      distance: place.distance,
+      description: place.description,
+      isFavorite: place.isFavorite,
+    );
+  }
+
+  factory _PlaceDetailData.fromPlace(Place place) {
+    return _PlaceDetailData(
+      domainPlace: place,
+      title: place.name,
+      ratingLabel: place.rating?.toStringAsFixed(1) ?? 'Chưa có',
+      reviewCount: place.rating == null ? 'chưa có' : 'dataset',
+      category: place.categories.map(CategoryMapper.displayName).join(', '),
+      price: _formatPrice(place.priceMin, place.priceMax),
+      distance: place.address ?? 'Đà Lạt',
+      description: place.description ?? 'Chưa có mô tả cho địa điểm này.',
+      isFavorite: false,
+    );
+  }
+
+  static String _formatPrice(int min, int max) {
+    if (max <= 0) return 'Miễn phí';
+    String currency(int value) =>
+        '${value.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (match) => '${match[1]}.')}đ';
+    if (min == max) return currency(max);
+    return '${currency(min)}–${currency(max)}';
+  }
+}
 
 /// Screen 8: Chi tiết địa điểm (Hồ Tuyền Lâm, v.v.)
 class PlaceDetailScreen extends StatefulWidget {
-  final PlaceItem place;
+  final _PlaceDetailData _place;
 
-  const PlaceDetailScreen({
-    super.key,
-    required this.place,
-  });
+  PlaceDetailScreen({super.key, required PlaceItem place})
+    : _place = _PlaceDetailData.fromLegacy(place);
+
+  PlaceDetailScreen.fromPlace({super.key, required Place place})
+    : _place = _PlaceDetailData.fromPlace(place);
 
   @override
   State<PlaceDetailScreen> createState() => _PlaceDetailScreenState();
@@ -24,7 +100,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _isFav = widget.place.isFavorite;
+    _isFav = widget._place.isFavorite;
   }
 
   @override
@@ -35,7 +111,7 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final place = widget.place;
+    final place = widget._place;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -55,7 +131,11 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
@@ -84,12 +164,11 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(
-                        place.image,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: const Color(0xFFC8DEC9),
-                        ),
+                      PlaceImage(
+                        place: place.domainPlace,
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: 0,
                       ),
                       Container(
                         decoration: BoxDecoration(
@@ -130,10 +209,14 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
                       // Rating & metadata badges
                       Row(
                         children: [
-                          const Icon(Icons.star, color: Color(0xFFFFB300), size: 18),
+                          const Icon(
+                            Icons.star,
+                            color: Color(0xFFFFB300),
+                            size: 18,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            '${place.rating} (${place.reviewCount} đánh giá)',
+                            '${place.ratingLabel} (${place.reviewCount} đánh giá)',
                             style: const TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
@@ -161,7 +244,10 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
                         unselectedLabelColor: AppColors.textSecondary,
                         indicatorColor: AppColors.primary,
                         indicatorWeight: 3,
-                        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                        labelStyle: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.5,
+                        ),
                         tabs: const [
                           Tab(text: 'Giới thiệu'),
                           Tab(text: 'Hình ảnh'),
@@ -208,9 +294,18 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildHighlightItem(Icons.nature_people, 'Chèo thuyền Kayak & SUP ngắm bình minh'),
-                      _buildHighlightItem(Icons.camera_alt, 'Check-in rừng thông ngập nước thơ mộng'),
-                      _buildHighlightItem(Icons.coffee, 'Nhiều quán cafe chill ven bờ hồ'),
+                      _buildHighlightItem(
+                        Icons.nature_people,
+                        'Chèo thuyền Kayak & SUP ngắm bình minh',
+                      ),
+                      _buildHighlightItem(
+                        Icons.camera_alt,
+                        'Check-in rừng thông ngập nước thơ mộng',
+                      ),
+                      _buildHighlightItem(
+                        Icons.coffee,
+                        'Nhiều quán cafe chill ven bờ hồ',
+                      ),
                     ],
                   ),
                 ),
@@ -262,21 +357,30 @@ class _PlaceDetailScreenState extends State<PlaceDetailScreen>
                     },
                     icon: Icon(
                       _isFav ? Icons.favorite : Icons.favorite_border,
-                      color: _isFav ? const Color(0xFFE53935) : AppColors.primary,
+                      color: _isFav
+                          ? const Color(0xFFE53935)
+                          : AppColors.primary,
                       size: 18,
                     ),
                     label: Text(
                       _isFav ? 'Đã lưu' : 'Lưu vào yêu thích',
                       style: TextStyle(
-                        color: _isFav ? const Color(0xFFE53935) : AppColors.primary,
+                        color: _isFav
+                            ? const Color(0xFFE53935)
+                            : AppColors.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
-                        color: _isFav ? const Color(0xFFE53935) : AppColors.primary,
+                        color: _isFav
+                            ? const Color(0xFFE53935)
+                            : AppColors.primary,
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 16,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

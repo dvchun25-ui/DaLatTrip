@@ -34,6 +34,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   late final AuthController _authController;
   late ForgotStep _currentStep;
 
+  String? _lastShownError;
+
   @override
   void initState() {
     super.initState();
@@ -43,21 +45,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   void _onAuthStateChanged() {
-    if (_authController.errorMessage != null && mounted) {
-      _showSnackBar(_authController.errorMessage!, isError: true);
+    final err = _authController.errorMessage;
+    if (err != null && err.isNotEmpty && err != _lastShownError && mounted) {
+      _lastShownError = err;
+      _showSnackBar(err, isError: true);
+    } else if (err == null) {
+      _lastShownError = null;
     }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         backgroundColor: isError ? AppColors.error : AppColors.primary,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 2500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
@@ -65,6 +76,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _handleSendResetEmail() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     if (!_emailFormKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
@@ -113,7 +125,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               children: [
                 // 1. Top Bar với nút Back
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
@@ -180,10 +195,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Huy hiệu khóa
-          const DalatBadgeIcon(
-            icon: Icons.lock_outline_rounded,
-            size: 68,
-          ),
+          const DalatBadgeIcon(icon: Icons.lock_outline_rounded, size: 68),
           const SizedBox(height: 16),
 
           // Title
@@ -244,10 +256,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const DalatBadgeIcon(
-            icon: Icons.lock_reset_rounded,
-            size: 68,
-          ),
+          const DalatBadgeIcon(icon: Icons.lock_reset_rounded, size: 68),
           const SizedBox(height: 16),
 
           // Title
@@ -294,8 +303,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             prefixIcon: Icons.lock_outline_rounded,
             isPassword: true,
             textInputAction: TextInputAction.done,
-            validator: (val) =>
-                AuthController.validateConfirmPassword(
+            validator: (val) => AuthController.validateConfirmPassword(
               _newPasswordController.text,
               val,
             ),

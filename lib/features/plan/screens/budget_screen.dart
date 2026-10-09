@@ -52,7 +52,9 @@ class BudgetScreen extends StatelessWidget {
                       value: 0.75,
                       strokeWidth: 20,
                       backgroundColor: const Color(0xFF81C784),
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
                     ),
                   ),
                   Column(
@@ -101,7 +103,11 @@ class BudgetScreen extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.lightbulb_outline, color: Color(0xFF2E7D32), size: 24),
+                  const Icon(
+                    Icons.lightbulb_outline,
+                    color: Color(0xFF2E7D32),
+                    size: 24,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -144,10 +150,7 @@ class BudgetScreen extends StatelessWidget {
           Container(
             width: 12,
             height: 12,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
           Text(

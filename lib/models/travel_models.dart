@@ -36,7 +36,7 @@ class TravelData {
       category: 'Thiên nhiên',
       price: 'Miễn phí',
       distance: '5.2 km',
-      image: 'assets/images/dalat_splash_bg.jpg',
+      image: 'assets/images/places/ho_tuyen_lam.webp',
       description:
           'Hồ Tuyền Lâm là một trong những địa điểm du lịch nổi tiếng nhất tại Đà Lạt, với khung cảnh thiên nhiên thơ mộng, hồ nước trong xanh bao quanh bởi những đồi thông xanh ngát.',
       isFavorite: true,
@@ -49,7 +49,7 @@ class TravelData {
       category: 'Văn hoá',
       price: '50.000đ',
       distance: '1.8 km',
-      image: 'assets/images/dalat_splash_bg.jpg',
+      image: 'assets/images/places/ga_da_lat.webp',
       description:
           'Nhà ga xe lửa cổ kính nhất Đông Dương mang phong cách kiến trúc Pháp độc đáo với 3 mái chóp hình đỉnh núi Langbiang hùng vĩ.',
       isFavorite: true,
@@ -62,7 +62,7 @@ class TravelData {
       category: 'Check-in',
       price: 'Miễn phí',
       distance: '24 km',
-      image: 'assets/images/dalat_splash_bg.jpg',
+      image: 'assets/images/places/doi_che_cau_dat.webp',
       description:
           'Không gian bạt ngàn màu xanh của những đồi chè tuổi đời gần 100 năm, điểm săn mây và đón bình minh đẹp bậc nhất xứ ngàn hoa.',
       isFavorite: true,
@@ -75,7 +75,7 @@ class TravelData {
       category: 'Tham quan',
       price: '100.000đ',
       distance: '3.6 km',
-      image: 'assets/images/dalat_splash_bg.jpg',
+      image: 'assets/images/places/thung_lung_tinh_yeu.webp',
       description:
           'Khu du lịch sinh thái nổi tiếng với cảnh quan lãng mạn, mê cung tình yêu, hồ Đa Thiện và những khu vườn hoa rực rỡ.',
       isFavorite: false,

@@ -43,3 +43,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Backend secrets
+backend/.env
+backend/.venv/
+backend/.pytest_cache/
+backend/.pytest_tmp*/
+backend/**/__pycache__/
+backend/**/*.pyc
+
+# Generated Android reports
+/android/build/
+
+# Local runtime tokens
+/config/mapbox.json

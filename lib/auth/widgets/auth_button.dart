@@ -35,8 +35,8 @@ class AuthButton extends StatelessWidget {
         ? Colors.transparent
         : (backgroundColor ?? AppColors.primary);
 
-    final effectiveTextColor = textColor ??
-        (isOutlined ? AppColors.primary : AppColors.textLight);
+    final effectiveTextColor =
+        textColor ?? (isOutlined ? AppColors.primary : AppColors.textLight);
 
     return SizedBox(
       width: width ?? double.infinity,
@@ -46,12 +46,17 @@ class AuthButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: effectiveBgColor,
           foregroundColor: effectiveTextColor,
-          disabledBackgroundColor: AppColors.primaryLight.withValues(alpha: 0.6),
+          disabledBackgroundColor: AppColors.primaryLight.withValues(
+            alpha: 0.6,
+          ),
           elevation: isOutlined ? 0 : 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
             side: isOutlined
-                ? BorderSide(color: backgroundColor ?? AppColors.primary, width: 1.5)
+                ? BorderSide(
+                    color: backgroundColor ?? AppColors.primary,
+                    width: 1.5,
+                  )
                 : BorderSide.none,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -75,10 +80,11 @@ class AuthButton extends StatelessWidget {
                   ],
                   Text(
                     text,
-                    style: (isOutlined
-                            ? AppTextStyles.buttonOutlined
-                            : AppTextStyles.buttonLarge)
-                        .copyWith(color: effectiveTextColor),
+                    style:
+                        (isOutlined
+                                ? AppTextStyles.buttonOutlined
+                                : AppTextStyles.buttonLarge)
+                            .copyWith(color: effectiveTextColor),
                   ),
                   if (trailingIcon != null) ...[
                     const SizedBox(width: 8),

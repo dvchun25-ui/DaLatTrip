@@ -68,11 +68,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
           vertical: 16,
         ),
         prefixIcon: widget.prefixIcon != null
-            ? Icon(
-                widget.prefixIcon,
-                size: 20,
-                color: AppColors.inputIcon,
-              )
+            ? Icon(widget.prefixIcon, size: 20, color: AppColors.inputIcon)
             : null,
         suffixIcon: widget.isPassword
             ? IconButton(
@@ -100,7 +96,10 @@ class _AuthTextFieldState extends State<AuthTextField> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.inputBorderFocused, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.inputBorderFocused,
+            width: 1.5,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

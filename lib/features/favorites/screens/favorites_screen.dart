@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../constants/app_colors.dart';
-import '../../../models/travel_models.dart';
-import '../../explore/screens/place_detail_screen.dart';
 
-/// Screen 11: Lưu yêu thích (Địa điểm | Lịch trình | Bài viết)
+import '../../../constants/app_colors.dart';
+import '../../../domain/entities/place.dart';
+import '../../explore/controllers/explore_controller.dart';
+import '../../explore/screens/place_detail_screen.dart';
+import '../../places/widgets/place_image.dart';
+
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
@@ -12,12 +14,39 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
+  static const _initialFavoriteIds = {
+    'ho_tuyen_lam',
+    'ga_da_lat',
+    'doi_che_cau_dat',
+  };
+
+  final ExploreController _controller = ExploreController();
   int _activeTab = 0;
 
   @override
-  Widget build(BuildContext context) {
-    final favorites = TravelData.samplePlaces.where((p) => p.isFavorite).toList();
+  void initState() {
+    super.initState();
+    _controller.addListener(_onChanged);
+    _controller.loadPlaces();
+  }
 
+  @override
+  void dispose() {
+    _controller.removeListener(_onChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
+
+  List<Place> get _favorites => _controller.places
+      .where((place) => _initialFavoriteIds.contains(place.id))
+      .toList(growable: false);
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
@@ -35,7 +64,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       ),
       body: Column(
         children: [
-          // Filter Tabs
           Container(
             color: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -50,90 +78,99 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
           ),
           const Divider(height: 1, color: AppColors.divider),
+          Expanded(child: _buildBody()),
+        ],
+      ),
+    );
+  }
 
-          // Favorites list
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: favorites.length,
-              itemBuilder: (context, index) {
-                final item = favorites[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => PlaceDetailScreen(place: item),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            item.image,
-                            width: 70,
-                            height: 70,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.title,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.star, color: Color(0xFFFFB300), size: 14),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    '${item.rating} • ${item.distance}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.favorite,
-                          color: Color(0xFFE53935),
-                          size: 22,
-                        ),
-                      ],
+  Widget _buildBody() {
+    if (_activeTab != 0) {
+      return const Center(
+        child: Text(
+          'Chưa có nội dung đã lưu.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+      );
+    }
+    if (_controller.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+    if (_controller.errorMessage != null) {
+      return Center(child: Text(_controller.errorMessage!));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _favorites.length,
+      itemBuilder: (context, index) => _buildPlaceCard(_favorites[index]),
+    );
+  }
+
+  Widget _buildPlaceCard(Place place) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PlaceDetailScreen.fromPlace(place: place),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            PlaceImage(place: place, width: 70, height: 70, borderRadius: 12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    place.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                );
-              },
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.star,
+                        color: Color(0xFFFFB300),
+                        size: 14,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        place.rating?.toStringAsFixed(1) ?? 'Chưa đánh giá',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const Icon(Icons.favorite, color: Color(0xFFE53935), size: 22),
+          ],
+        ),
       ),
     );
   }

@@ -97,11 +97,7 @@ class SocialLoginButton extends StatelessWidget {
       case SocialType.google:
         return const _GoogleIcon();
       case SocialType.apple:
-        return const Icon(
-          Icons.apple,
-          size: 26,
-          color: Colors.black,
-        );
+        return const Icon(Icons.apple, size: 26, color: Colors.black);
       case SocialType.email:
         return const Icon(
           Icons.mail_outline_rounded,
@@ -118,10 +114,7 @@ class _GoogleIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(22, 22),
-      painter: _GoogleLogoPainter(),
-    );
+    return CustomPaint(size: const Size(22, 22), painter: _GoogleLogoPainter());
   }
 }
 
@@ -196,7 +189,12 @@ class _GoogleLogoPainter extends CustomPainter {
     // Blue bar in the middle of 'G'
     paint.color = const Color(0xFF4285F4);
     final barRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(center.dx - 1, center.dy - radius * 0.22, radius * 1.05, radius * 0.44),
+      Rect.fromLTWH(
+        center.dx - 1,
+        center.dy - radius * 0.22,
+        radius * 1.05,
+        radius * 0.44,
+      ),
       const Radius.circular(1),
     );
     canvas.drawRRect(barRect, paint);

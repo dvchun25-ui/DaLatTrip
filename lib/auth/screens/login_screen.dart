@@ -25,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late final AuthController _authController;
+  String? _lastShownError;
 
   @override
   void initState() {
@@ -34,21 +35,30 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _onAuthStateChanged() {
-    if (_authController.errorMessage != null && mounted) {
-      _showSnackBar(_authController.errorMessage!, isError: true);
+    final err = _authController.errorMessage;
+    if (err != null && err.isNotEmpty && err != _lastShownError && mounted) {
+      _lastShownError = err;
+      _showSnackBar(err, isError: true);
+    } else if (err == null) {
+      _lastShownError = null;
     }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         backgroundColor: isError ? AppColors.error : AppColors.primary,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 2500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
@@ -65,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
@@ -80,6 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     FocusScope.of(context).unfocus();
     final success = await _authController.loginWithGoogle();
     if (success && mounted) {
@@ -89,6 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleAppleLogin() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     FocusScope.of(context).unfocus();
     final success = await _authController.loginWithApple();
     if (success && mounted) {
@@ -142,7 +155,10 @@ class _LoginScreenState extends State<LoginScreen> {
           isWide
               ? Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 32,
+                      horizontal: 16,
+                    ),
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 460),
                       decoration: BoxDecoration(
@@ -200,10 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Logo DALATTRIP
                 const Center(
-                  child: DalatLogo(
-                    showTagline: false,
-                    iconSize: 52,
-                  ),
+                  child: DalatLogo(showTagline: false, iconSize: 52),
                 ),
                 const SizedBox(height: 14),
 
@@ -294,10 +307,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   children: const [
                     Expanded(
-                      child: Divider(
-                        color: AppColors.divider,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.divider, thickness: 1),
                     ),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
@@ -310,10 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     Expanded(
-                      child: Divider(
-                        color: AppColors.divider,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.divider, thickness: 1),
                     ),
                   ],
                 ),
@@ -359,9 +366,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => RegisterScreen(
-                              authController: _authController,
-                            ),
+                            builder: (_) =>
+                                RegisterScreen(authController: _authController),
                           ),
                         );
                       },

@@ -17,12 +17,10 @@ class DalatLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double effectiveHeight = height ?? (iconSize != null ? iconSize! * 1.5 : 90.0);
+    final double effectiveHeight =
+        height ?? (iconSize != null ? iconSize! * 1.5 : 90.0);
 
-    return AppAssetImages.logo(
-      height: effectiveHeight,
-      fit: BoxFit.contain,
-    );
+    return AppAssetImages.logo(height: effectiveHeight, fit: BoxFit.contain);
   }
 }
 
@@ -31,11 +29,7 @@ class DalatBadgeIcon extends StatelessWidget {
   final IconData icon;
   final double size;
 
-  const DalatBadgeIcon({
-    super.key,
-    required this.icon,
-    this.size = 72,
-  });
+  const DalatBadgeIcon({super.key, required this.icon, this.size = 72});
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +41,7 @@ class DalatBadgeIcon extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Icon(
-        icon,
-        size: size * 0.46,
-        color: AppColors.mintIcon,
-      ),
+      child: Icon(icon, size: size * 0.46, color: AppColors.mintIcon),
     );
   }
 }
@@ -102,8 +92,7 @@ class DalatHeaderBanner extends StatelessWidget {
             ),
           ),
 
-          if (overlayChild != null)
-            Positioned.fill(child: overlayChild!),
+          if (overlayChild != null) Positioned.fill(child: overlayChild!),
 
           // 3. Nút Back
           if (showBackButton)
@@ -145,11 +134,7 @@ class DalatBottomLandscape extends StatelessWidget {
   final String? quoteText;
   final double? height;
 
-  const DalatBottomLandscape({
-    super.key,
-    this.quoteText,
-    this.height,
-  });
+  const DalatBottomLandscape({super.key, this.quoteText, this.height});
 
   @override
   Widget build(BuildContext context) {
@@ -199,12 +184,7 @@ class DalatBottomLandscape extends StatelessWidget {
                 color: Color(0xFF1E3A2F),
                 letterSpacing: 0.5,
                 height: 1.2,
-                shadows: [
-                  Shadow(
-                    color: Colors.white,
-                    blurRadius: 8,
-                  ),
-                ],
+                shadows: [Shadow(color: Colors.white, blurRadius: 8)],
               ),
             ),
           ),
@@ -241,11 +221,7 @@ class DalatWoodenSignpost extends StatelessWidget {
               ),
             ),
           ),
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _SignpostPainter(),
-            ),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _SignpostPainter())),
           Positioned(
             right: 28,
             bottom: 28,
@@ -301,7 +277,12 @@ class _SignpostPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final postPaint = Paint()..color = const Color(0xFF6D4C41);
     canvas.drawRect(
-      Rect.fromLTWH(size.width * 0.72, size.height * 0.35, 12, size.height * 0.65),
+      Rect.fromLTWH(
+        size.width * 0.72,
+        size.height * 0.35,
+        12,
+        size.height * 0.65,
+      ),
       postPaint,
     );
   }

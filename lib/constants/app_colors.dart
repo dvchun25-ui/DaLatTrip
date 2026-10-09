@@ -48,18 +48,18 @@ class AppColors {
 
   // Gradients
   static LinearGradient get forestGradient => const LinearGradient(
-        colors: [Color(0xFF1E3A2F), Color(0xFF142720)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+    colors: [Color(0xFF1E3A2F), Color(0xFF142720)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   static LinearGradient get mistyHeaderGradient => LinearGradient(
-        colors: [
-          const Color(0xFF9DBEAD).withValues(alpha: 0.35),
-          const Color(0xFFDDECE3).withValues(alpha: 0.2),
-          Colors.white,
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      );
+    colors: [
+      const Color(0xFF9DBEAD).withValues(alpha: 0.35),
+      const Color(0xFFDDECE3).withValues(alpha: 0.2),
+      Colors.white,
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
 }

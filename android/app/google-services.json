@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "94721516352-e4nfkaj7mhfeacg4kslt5fbglppgg1v3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dalattrip",
+            "certificate_hash": "28ee2e69d191010df25838688df943a7d14c5d13"
+          }
+        },
+        {
           "client_id": "94721516352-ea9e4nfve6rldlb8pvjs1hlk2ma80f7i.apps.googleusercontent.com",
           "client_type": 3
         }

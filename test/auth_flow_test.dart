@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dalattrip/auth/services/auth_service.dart';
 import 'package:dalattrip/auth/controllers/auth_controller.dart';
+import 'package:dalattrip/auth/screens/splash_screen.dart';
 import 'package:dalattrip/auth/screens/onboarding_screen.dart';
 import 'package:dalattrip/auth/screens/login_screen.dart';
 import 'package:dalattrip/auth/screens/register_screen.dart';
@@ -48,12 +51,18 @@ void main() {
 
     test('Validate Password', () {
       expect(AuthController.validatePassword(null), 'Vui lòng nhập mật khẩu');
-      expect(AuthController.validatePassword('12345'), 'Mật khẩu phải có ít nhất 6 ký tự');
+      expect(
+        AuthController.validatePassword('12345'),
+        'Mật khẩu phải có ít nhất 6 ký tự',
+      );
       expect(AuthController.validatePassword('123456'), isNull);
     });
 
     test('Validate Full Name', () {
-      expect(AuthController.validateFullName(null), 'Vui lòng nhập họ và tên của bạn');
+      expect(
+        AuthController.validateFullName(null),
+        'Vui lòng nhập họ và tên của bạn',
+      );
       expect(AuthController.validateFullName('A'), 'Họ tên quá ngắn');
       expect(AuthController.validateFullName('Nguyễn Văn A'), isNull);
     });
@@ -71,8 +80,9 @@ void main() {
   });
 
   group('2. OnboardingScreen', () {
-    testWidgets('Hiển thị tiêu đề, 3 thẻ ảnh và nút Bắt đầu',
-        (WidgetTester tester) async {
+    testWidgets('Hiển thị tiêu đề, 3 thẻ ảnh và nút Bắt đầu', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -90,8 +100,9 @@ void main() {
   });
 
   group('3. LoginScreen', () {
-    testWidgets('Hiển thị thẻ trượt bo tròn và form đăng nhập',
-        (WidgetTester tester) async {
+    testWidgets('Hiển thị thẻ trượt bo tròn và form đăng nhập', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -119,8 +130,9 @@ void main() {
   });
 
   group('4. RegisterScreen', () {
-    testWidgets('Hiển thị 4 trường và header sương mờ',
-        (WidgetTester tester) async {
+    testWidgets('Hiển thị 4 trường và header sương mờ', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -147,8 +159,9 @@ void main() {
   });
 
   group('5. ForgotPasswordScreen', () {
-    testWidgets('Quy trình Quên mật khẩu & Thành công',
-        (WidgetTester tester) async {
+    testWidgets('Quy trình Quên mật khẩu & Thành công', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -166,14 +179,18 @@ void main() {
       await tester.tap(find.widgetWithText(AuthButton, 'Gửi liên kết'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Đặt lại mật khẩu\nthành công!'), findsOneWidget);
+      expect(
+        find.textContaining('Đặt lại mật khẩu\nthành công!'),
+        findsOneWidget,
+      );
       expect(find.text('Quay về đăng nhập'), findsOneWidget);
     });
   });
 
   group('6. QuickLoginScreen', () {
-    testWidgets('Hiển thị 3 nút đăng nhập nhanh và biển chỉ dẫn gỗ',
-        (WidgetTester tester) async {
+    testWidgets('Hiển thị 3 nút đăng nhập nhanh và biển chỉ dẫn gỗ', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 3.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -189,6 +206,81 @@ void main() {
       expect(find.text('Tiếp tục với Google'), findsOneWidget);
       expect(find.text('Tiếp tục với Apple'), findsOneWidget);
       expect(find.text('Tiếp tục với Email'), findsOneWidget);
+    });
+  });
+
+  group('7. Session Persistence & Auto-login', () {
+    test('saveUserSession and clearUserSession work with SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({});
+      final authService = AuthService();
+
+      expect(await authService.hasSavedSession(), isFalse);
+
+      await authService.saveUserSession(
+        email: 'traveler@dalat.vn',
+        displayName: 'Minh Thảo',
+      );
+
+      expect(await authService.hasSavedSession(), isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(AuthService.keyIsLoggedIn), isTrue);
+      expect(prefs.getString(AuthService.keyUserEmail), 'traveler@dalat.vn');
+      expect(prefs.getString(AuthService.keyUserName), 'Minh Thảo');
+
+      await authService.clearUserSession();
+      expect(await authService.hasSavedSession(), isFalse);
+    });
+  });
+
+  group('8. SplashScreen Routing & Tap Tests', () {
+    testWidgets('Lần đầu mở app -> điều hướng tới OnboardingScreen sau 1s', (
+      WidgetTester tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'has_seen_onboarding': false});
+
+      await tester.pumpWidget(const MaterialApp(home: SplashScreen()));
+      expect(find.text('Đi Đà Lạt'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 1100));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Lên kế hoạch'), findsOneWidget);
+    });
+
+    testWidgets('Mở app khi đã qua onboarding nhưng chưa đăng nhập -> điều hướng tới LoginScreen', (
+      WidgetTester tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'has_seen_onboarding': true,
+        'is_logged_in': false,
+      });
+
+      await tester.pumpWidget(const MaterialApp(home: SplashScreen()));
+      expect(find.text('Đi Đà Lạt'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 1100));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chào mừng trở lại'), findsOneWidget);
+    });
+
+    testWidgets('Người dùng chạm (tap) vào SplashScreen -> lập tức điều hướng không cần chờ hết 1s', (
+      WidgetTester tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'has_seen_onboarding': true,
+        'is_logged_in': false,
+      });
+
+      await tester.pumpWidget(const MaterialApp(home: SplashScreen()));
+      expect(find.text('Đi Đà Lạt'), findsOneWidget);
+
+      // Chạm màn hình ngay lập tức
+      await tester.tap(find.byType(SplashScreen));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chào mừng trở lại'), findsOneWidget);
     });
   });
 }

@@ -47,10 +47,7 @@ class AuthController extends ChangeNotifier {
   }
 
   /// Đăng nhập bằng Email & Password
-  Future<bool> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> login({required String email, required String password}) async {
     _setLoading(true);
     clearMessages();
 
@@ -211,7 +208,10 @@ class AuthController extends ChangeNotifier {
   }
 
   /// Kiểm tra Mật khẩu xác nhận
-  static String? validateConfirmPassword(String? password, String? confirmPassword) {
+  static String? validateConfirmPassword(
+    String? password,
+    String? confirmPassword,
+  ) {
     if (confirmPassword == null || confirmPassword.isEmpty) {
       return 'Vui lòng xác nhận mật khẩu';
     }

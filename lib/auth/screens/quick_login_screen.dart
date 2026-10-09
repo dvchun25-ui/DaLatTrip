@@ -5,6 +5,8 @@ import '../widgets/social_login_button.dart';
 import '../widgets/dalat_brand_widgets.dart';
 import 'login_screen.dart';
 
+import '../../features/navigation/main_navigation_screen.dart';
+
 /// Màn hình Đăng nhập nhanh chuẩn 100% theo màn hình thứ 8 trong ảnh thiết kế
 class QuickLoginScreen extends StatefulWidget {
   final AuthController? authController;
@@ -17,6 +19,7 @@ class QuickLoginScreen extends StatefulWidget {
 
 class _QuickLoginScreenState extends State<QuickLoginScreen> {
   late final AuthController _authController;
+  String? _lastShownError;
 
   @override
   void initState() {
@@ -26,30 +29,56 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
   }
 
   void _onAuthStateChanged() {
-    if (_authController.errorMessage != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_authController.errorMessage!),
-          backgroundColor: AppColors.error,
-        ),
-      );
+    final err = _authController.errorMessage;
+    if (err != null && err.isNotEmpty && err != _lastShownError && mounted) {
+      _lastShownError = err;
+      _showSnackBar(err, isError: true);
+    } else if (err == null) {
+      _lastShownError = null;
     }
   }
 
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: isError ? AppColors.error : AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 2500),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
   Future<void> _handleGoogle() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     final success = await _authController.loginWithGoogle();
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập Google thành công!')),
+      _showSnackBar('Đăng nhập Google thành công!');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        (route) => false,
       );
     }
   }
 
   Future<void> _handleApple() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     final success = await _authController.loginWithApple();
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập Apple thành công!')),
+      _showSnackBar('Đăng nhập Apple thành công!');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        (route) => false,
       );
     }
   }
@@ -109,7 +138,9 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
                       SocialLoginButton(
                         type: SocialType.google,
                         isFullWidth: true,
-                        onPressed: _authController.isLoading ? null : _handleGoogle,
+                        onPressed: _authController.isLoading
+                            ? null
+                            : _handleGoogle,
                       ),
                       const SizedBox(height: 16),
 
@@ -117,7 +148,9 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
                       SocialLoginButton(
                         type: SocialType.apple,
                         isFullWidth: true,
-                        onPressed: _authController.isLoading ? null : _handleApple,
+                        onPressed: _authController.isLoading
+                            ? null
+                            : _handleApple,
                       ),
                       const SizedBox(height: 16),
 
@@ -128,9 +161,8 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => LoginScreen(
-                                authController: _authController,
-                              ),
+                              builder: (_) =>
+                                  LoginScreen(authController: _authController),
                             ),
                           );
                         },

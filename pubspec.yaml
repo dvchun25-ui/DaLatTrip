@@ -36,7 +36,18 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^4.15.0
   firebase_auth: ^6.7.0
-  google_sign_in: ^7.2.0
+  cloud_firestore: ^6.1.0
+  google_sign_in: ^6.2.2
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
+  http: ^1.5.0
+  mapbox_maps_flutter: ^2.31.1
+  shared_preferences: ^2.5.3
+  geolocator: ^13.0.2
+  camera: ^0.11.0+2
+  image_picker: ^1.1.2
+  path_provider: ^2.1.5
+  video_player: ^2.9.2
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +59,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+# 2.3.x dùng JNI và libdartjni.so không tải được trên emulator x86_64 16 KB.
+# Bản MethodChannel này ổn định cho cache ảnh trên Android hiện tại.
+dependency_overrides:
+  path_provider_android: 2.2.23
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -62,7 +78,9 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/data/dalat_places.json
     - assets/images/
+    - assets/images/places/
     - assets/images/dalat_logo.png
     - assets/images/dalat_splash_bg.jpg
     - assets/images/dalat_glasshouse.jpg

@@ -25,8 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
-
   late final AuthController _authController;
+  String? _lastShownError;
 
   @override
   void initState() {
@@ -36,21 +36,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _onAuthStateChanged() {
-    if (_authController.errorMessage != null && mounted) {
-      _showSnackBar(_authController.errorMessage!, isError: true);
+    final err = _authController.errorMessage;
+    if (err != null && err.isNotEmpty && err != _lastShownError && mounted) {
+      _lastShownError = err;
+      _showSnackBar(err, isError: true);
+    } else if (err == null) {
+      _lastShownError = null;
     }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           message,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         backgroundColor: isError ? AppColors.error : AppColors.primary,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(milliseconds: 2500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
@@ -67,6 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleRegister() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
@@ -84,6 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     FocusScope.of(context).unfocus();
     final success = await _authController.loginWithGoogle();
     if (success && mounted) {
@@ -93,6 +104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleAppleLogin() async {
+    ScaffoldMessenger.of(context).clearSnackBars();
     FocusScope.of(context).unfocus();
     final success = await _authController.loginWithApple();
     if (success && mounted) {
@@ -177,7 +189,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           isWide
               ? Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 32,
+                      horizontal: 16,
+                    ),
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 460),
                       decoration: BoxDecoration(
@@ -235,10 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 // Logo DALATTRIP
                 const Center(
-                  child: DalatLogo(
-                    showTagline: false,
-                    iconSize: 50,
-                  ),
+                  child: DalatLogo(showTagline: false, iconSize: 50),
                 ),
                 const SizedBox(height: 12),
 
@@ -307,8 +319,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   prefixIcon: Icons.lock_outline_rounded,
                   isPassword: true,
                   textInputAction: TextInputAction.done,
-                  validator: (val) =>
-                      AuthController.validateConfirmPassword(
+                  validator: (val) => AuthController.validateConfirmPassword(
                     _passwordController.text,
                     val,
                   ),
@@ -329,10 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Row(
                   children: const [
                     Expanded(
-                      child: Divider(
-                        color: AppColors.divider,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.divider, thickness: 1),
                     ),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
@@ -345,10 +353,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     Expanded(
-                      child: Divider(
-                        color: AppColors.divider,
-                        thickness: 1,
-                      ),
+                      child: Divider(color: AppColors.divider, thickness: 1),
                     ),
                   ],
                 ),

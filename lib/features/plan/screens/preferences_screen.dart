@@ -1,32 +1,72 @@
 import 'package:flutter/material.dart';
 import '../../../constants/app_colors.dart';
+import '../../../core/constants/place_categories.dart';
+import '../controllers/create_trip_controller.dart';
 import 'itinerary_screen.dart';
 
 /// Screen 4: Chọn sở thích
 class PreferencesScreen extends StatefulWidget {
-  const PreferencesScreen({super.key});
+  final CreateTripController controller;
+
+  const PreferencesScreen({super.key, required this.controller});
 
   @override
   State<PreferencesScreen> createState() => _PreferencesScreenState();
 }
 
 class _PreferencesScreenState extends State<PreferencesScreen> {
-  final Set<String> _selected = {'Thiên nhiên', 'Khám phá'};
+  late final Set<String> _selected;
 
   final List<Map<String, dynamic>> _activities = [
-    {'name': 'Thiên nhiên', 'icon': Icons.forest_outlined},
-    {'name': 'Cafe', 'icon': Icons.coffee_outlined},
-    {'name': 'Chụp ảnh', 'icon': Icons.camera_alt_outlined},
-    {'name': 'Ăn uống', 'icon': Icons.restaurant_outlined},
-    {'name': 'Khám phá', 'icon': Icons.explore_outlined},
-    {'name': 'Văn hoá', 'icon': Icons.temple_buddhist_outlined},
-    {'name': 'Nghỉ dưỡng', 'icon': Icons.spa_outlined},
-    {'name': 'Phiêu lưu', 'icon': Icons.hiking_outlined},
-    {'name': 'Gia đình', 'icon': Icons.family_restroom_outlined},
-    {'name': 'Lãng mạn', 'icon': Icons.favorite_border_outlined},
-    {'name': 'Mua sắm', 'icon': Icons.shopping_bag_outlined},
-    {'name': 'Check-in', 'icon': Icons.pin_drop_outlined},
+    {
+      'name': 'Thiên nhiên',
+      'value': PlaceCategories.nature,
+      'icon': Icons.forest_outlined,
+    },
+    {
+      'name': 'Cà phê',
+      'value': PlaceCategories.cafe,
+      'icon': Icons.coffee_outlined,
+    },
+    {
+      'name': 'Check-in',
+      'value': PlaceCategories.checkin,
+      'icon': Icons.camera_alt_outlined,
+    },
+    {
+      'name': 'Ẩm thực',
+      'value': PlaceCategories.food,
+      'icon': Icons.restaurant_outlined,
+    },
+    {
+      'name': 'Khám phá',
+      'value': PlaceCategories.adventure,
+      'icon': Icons.explore_outlined,
+    },
+    {
+      'name': 'Văn hóa',
+      'value': PlaceCategories.culture,
+      'icon': Icons.temple_buddhist_outlined,
+    },
+    {
+      'name': 'Thư giãn',
+      'value': PlaceCategories.relax,
+      'icon': Icons.spa_outlined,
+    },
+    {
+      'name': 'Gia đình',
+      'value': PlaceCategories.family,
+      'icon': Icons.family_restroom_outlined,
+    },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.controller.interests.isEmpty
+        ? {PlaceCategories.nature, PlaceCategories.adventure}
+        : widget.controller.interests.toSet();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,25 +118,30 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               itemBuilder: (context, index) {
                 final item = _activities[index];
                 final name = item['name'] as String;
+                final value = item['value'] as String;
                 final icon = item['icon'] as IconData;
-                final isSelected = _selected.contains(name);
+                final isSelected = _selected.contains(value);
 
                 return GestureDetector(
                   onTap: () {
                     setState(() {
                       if (isSelected) {
-                        _selected.remove(name);
+                        _selected.remove(value);
                       } else {
-                        _selected.add(name);
+                        _selected.add(value);
                       }
                     });
                   },
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE8F2EC) : const Color(0xFFF7FAF8),
+                      color: isSelected
+                          ? const Color(0xFFE8F2EC)
+                          : const Color(0xFFF7FAF8),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppColors.primary : Colors.transparent,
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.transparent,
                         width: 1.8,
                       ),
                     ),
@@ -116,14 +161,18 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.05),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 6,
                                     ),
                                   ],
                                 ),
                                 child: Icon(
                                   icon,
-                                  color: isSelected ? Colors.white : AppColors.primary,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppColors.primary,
                                   size: 24,
                                 ),
                               ),
@@ -132,8 +181,12 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                                 name,
                                 style: TextStyle(
                                   fontSize: 12.5,
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                  color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
                                 ),
                               ),
                             ],
@@ -182,9 +235,18 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
+                  widget.controller.setInterests(_selected);
+                  final error = widget.controller.validate();
+                  if (error != null) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(error)));
+                    return;
+                  }
+                  final request = widget.controller.createTripRequest();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ItineraryScreen(),
+                      builder: (_) => ItineraryScreen(request: request),
                     ),
                   );
                 },
@@ -198,10 +260,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 ),
                 child: const Text(
                   'Tiếp tục',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
             ),

@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import '../home/screens/home_screen.dart';
-import '../explore/screens/explore_screen.dart';
+import '../check_in/presentation/screens/check_in_room_screen.dart';
 import '../plan/screens/create_trip_screen.dart';
 import '../favorites/screens/favorites_screen.dart';
 import '../profile/screens/profile_screen.dart';
 
-/// Navigation chính gồm 5 tab theo đúng thiết kế 12 màn hình
+/// Navigation chính gồm 5 tab (Trang chủ, Check-in nhóm, Lộ trình, Yêu thích, Cá nhân)
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
 
-  const MainNavigationScreen({
-    super.key,
-    this.initialIndex = 0,
-  });
+  const MainNavigationScreen({super.key, this.initialIndex = 0});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -21,19 +18,24 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   late int _currentIndex;
-
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    ExploreScreen(),
-    CreateTripScreen(),
-    FavoritesScreen(),
-    ProfileScreen(),
-  ];
+  late final List<Widget?> _screens;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _screens = List<Widget?>.filled(5, null);
+    _ensureScreen(_currentIndex);
+  }
+
+  void _ensureScreen(int index) {
+    _screens[index] ??= switch (index) {
+      0 => const HomeScreen(),
+      1 => const CheckInRoomScreen(),
+      2 => const CreateTripScreen(),
+      3 => const FavoritesScreen(),
+      _ => const ProfileScreen(),
+    };
   }
 
   @override
@@ -41,7 +43,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: _screens
+            .map((screen) => screen ?? const SizedBox.shrink())
+            .toList(growable: false),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -58,6 +62,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           currentIndex: _currentIndex,
           onTap: (index) {
             setState(() {
+              _ensureScreen(index);
               _currentIndex = index;
             });
           },
@@ -76,9 +81,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               label: 'Trang chủ',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.explore_outlined),
-              activeIcon: Icon(Icons.explore),
-              label: 'Khám phá',
+              icon: Icon(Icons.location_on_outlined),
+              activeIcon: Icon(Icons.location_on),
+              label: 'Check-in',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.add_circle_outline, size: 28),
