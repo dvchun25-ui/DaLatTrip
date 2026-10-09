@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -9,7 +10,8 @@ import '../../domain/entities/check_in_room.dart';
 import '../../domain/repositories/check_in_repository.dart';
 
 class LocalCheckInRepository implements CheckInRepository {
-  static final LocalCheckInRepository instance = LocalCheckInRepository._internal();
+  static final LocalCheckInRepository instance =
+      LocalCheckInRepository._internal();
   factory LocalCheckInRepository() => instance;
   LocalCheckInRepository._internal();
 
@@ -34,7 +36,9 @@ class LocalCheckInRepository implements CheckInRepository {
         if (content.isNotEmpty) {
           final decoded = jsonDecode(content) as List<dynamic>;
           _memoryRooms = decoded
-              .map((item) => CheckInRoom.fromJson(Map<String, dynamic>.from(item)))
+              .map(
+                (item) => CheckInRoom.fromJson(Map<String, dynamic>.from(item)),
+              )
               .toList();
         }
       }
@@ -46,20 +50,60 @@ class LocalCheckInRepository implements CheckInRepository {
       // Khởi tạo phòng mẫu mặc định matching Screenshot 1 & 4
       _memoryRooms = [_createDefaultRoom()];
       await _saveToDisk();
+    } else if (_migrateLegacyOwner()) {
+      await _saveToDisk();
     }
     _isInitialized = true;
   }
 
+  bool _migrateLegacyOwner() {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) return false;
+    var changed = false;
+    _memoryRooms = _memoryRooms.map((room) {
+      final isLegacyOwner =
+          room.ownerId == 'chung_user' ||
+          room.ownerId == 'local_guest' ||
+          room.ownerId.isEmpty;
+      if (!isLegacyOwner || room.members.isEmpty) return room;
+      final displayName =
+          firebaseUser.displayName ??
+          firebaseUser.email?.split('@').first ??
+          'Người dùng';
+      final migratedOwner = CheckInMember(
+        userId: firebaseUser.uid,
+        displayName: displayName,
+        username: firebaseUser.email?.split('@').first ?? 'traveler',
+        avatarPath: firebaseUser.photoURL,
+        status: CheckInMemberStatus.owner,
+        checkInEntry: room.members.first.checkInEntry,
+      );
+      changed = true;
+      return room.copyWith(
+        ownerId: firebaseUser.uid,
+        members: [migratedOwner, ...room.members.skip(1)],
+      );
+    }).toList();
+    return changed;
+  }
+
   CheckInRoom _createDefaultRoom() {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final ownerId = firebaseUser?.uid ?? 'local_guest';
+    final displayName =
+        firebaseUser?.displayName ??
+        firebaseUser?.email?.split('@').first ??
+        'Người dùng';
     return CheckInRoom(
       id: 'room_log_001',
       name: 'log',
-      ownerId: 'chung_user',
-      members: const [
+      ownerId: ownerId,
+      members: [
         CheckInMember(
-          userId: 'chung_user',
-          displayName: 'Chung',
-          username: 'chung_dalat',
+          userId: ownerId,
+          displayName: displayName,
+          username: firebaseUser?.email?.split('@').first ?? 'local_guest',
+          avatarPath: firebaseUser?.photoURL,
           status: CheckInMemberStatus.owner,
         ),
       ],
@@ -112,6 +156,11 @@ class LocalCheckInRepository implements CheckInRepository {
   }
 
   @override
+  Stream<CheckInRoom?> watchRoom(String id) async* {
+    yield await getRoomById(id);
+  }
+
+  @override
   Future<void> updateRoom(CheckInRoom room) async {
     await _init();
     final index = _memoryRooms.indexWhere((r) => r.id == room.id);
@@ -133,7 +182,9 @@ class LocalCheckInRepository implements CheckInRepository {
     }
 
     final updatedMembers = List<CheckInMember>.from(room.members);
-    final existingIdx = updatedMembers.indexWhere((m) => m.userId == member.userId);
+    final existingIdx = updatedMembers.indexWhere(
+      (m) => m.userId == member.userId,
+    );
     if (existingIdx != -1) {
       updatedMembers[existingIdx] = member;
     } else {
@@ -149,7 +200,9 @@ class LocalCheckInRepository implements CheckInRepository {
     final room = await getRoomById(roomId);
     if (room == null) return;
 
-    final updatedMembers = room.members.where((m) => m.userId != userId).toList();
+    final updatedMembers = room.members
+        .where((m) => m.userId != userId)
+        .toList();
     await updateRoom(room.copyWith(members: updatedMembers));
   }
 

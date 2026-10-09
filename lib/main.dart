@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'core/supabase/supabase_client_provider.dart';
 import 'firebase_options.dart';
 import 'constants/app_colors.dart';
 import 'auth/screens/splash_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Giữ cache ảnh giải mã trong RAM ở mức vừa phải. Ảnh mẫu địa điểm được
   // đóng gói trong app; giới hạn này cũng áp dụng cho URL ảnh từ API về sau.
@@ -19,13 +20,29 @@ void main() {
   if (!kIsWeb && mapboxToken.isNotEmpty) {
     MapboxOptions.setAccessToken(mapboxToken);
   }
-  runApp(
-    DaLatTripApp(
-      firebaseInitializer: () => Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      ),
-    ),
+  Future<FirebaseApp> Function()? retryInitializer;
+  try {
+    await _initializeBackends();
+  } catch (error) {
+    debugPrint('Firebase initialization failed: $error');
+    retryInitializer = _initializeBackends;
+  }
+  runApp(DaLatTripApp(firebaseInitializer: retryInitializer));
+}
+
+Future<FirebaseApp> _initializeBackends() async {
+  final firebaseApp = await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
+  try {
+    await SupabaseClientProvider.initialize();
+  } catch (error, stackTrace) {
+    // Storage media là khả năng bổ sung. Firebase và các màn không dùng media
+    // vẫn phải hoạt động khi Supabase tạm thời không khởi tạo được.
+    debugPrint('Supabase Storage initialization failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+  return firebaseApp;
 }
 
 class DaLatTripApp extends StatelessWidget {

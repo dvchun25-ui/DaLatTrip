@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -111,7 +112,9 @@ class _UserSearchScreenState extends State<UserSearchScreen>
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0F1712) : AppColors.scaffoldBackground;
+    final bgColor = isDark
+        ? const Color(0xFF0F1712)
+        : AppColors.scaffoldBackground;
     final cardColor = isDark ? const Color(0xFF1B2822) : Colors.white;
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
 
@@ -139,9 +142,12 @@ class _UserSearchScreenState extends State<UserSearchScreen>
           unselectedLabelColor: textColor.withValues(alpha: 0.5),
           indicatorColor: const Color(0xFF81C784),
           indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13.5,
+          ),
           tabs: const [
-            Tab(text: 'Tìm @username'),
+            Tab(text: 'Tìm biệt danh'),
             Tab(text: 'Bạn bè của tôi'),
           ],
         ),
@@ -163,7 +169,12 @@ class _UserSearchScreenState extends State<UserSearchScreen>
     );
   }
 
-  Widget _buildSearchTab(UserProfile? myProfile, bool isDark, Color cardColor, Color textColor) {
+  Widget _buildSearchTab(
+    UserProfile? myProfile,
+    bool isDark,
+    Color cardColor,
+    Color textColor,
+  ) {
     return Column(
       children: [
         // iOS Search Bar
@@ -180,15 +191,23 @@ class _UserSearchScreenState extends State<UserSearchScreen>
               onChanged: _onSearchChanged,
               style: TextStyle(color: textColor, fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'Tìm bằng tên hoặc @username (Ví dụ: @vchun_211)',
+                hintText: 'Tìm bằng biệt danh hoặc @username',
                 hintStyle: TextStyle(
                   color: textColor.withValues(alpha: 0.4),
                   fontSize: 13,
                 ),
-                prefixIcon: const Icon(CupertinoIcons.search, color: Color(0xFF81C784), size: 20),
+                prefixIcon: const Icon(
+                  CupertinoIcons.search,
+                  color: Color(0xFF81C784),
+                  size: 20,
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: Icon(CupertinoIcons.xmark_circle_fill, size: 18, color: textColor.withValues(alpha: 0.4)),
+                        icon: Icon(
+                          CupertinoIcons.xmark_circle_fill,
+                          size: 18,
+                          color: textColor.withValues(alpha: 0.4),
+                        ),
                         onPressed: () {
                           _searchController.clear();
                           _onSearchChanged('');
@@ -210,7 +229,11 @@ class _UserSearchScreenState extends State<UserSearchScreen>
               children: [
                 Text(
                   'Gần đây:',
-                  style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: textColor.withValues(alpha: 0.5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -221,9 +244,21 @@ class _UserSearchScreenState extends State<UserSearchScreen>
                         return Padding(
                           padding: const EdgeInsets.only(right: 6),
                           child: ActionChip(
-                            label: Text('@$term', style: const TextStyle(fontSize: 11, color: Color(0xFF81C784))),
-                            backgroundColor: isDark ? const Color(0xFF1B2822) : Colors.white,
-                            side: BorderSide(color: const Color(0xFF81C784).withValues(alpha: 0.3)),
+                            label: Text(
+                              '@$term',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF81C784),
+                              ),
+                            ),
+                            backgroundColor: isDark
+                                ? const Color(0xFF1B2822)
+                                : Colors.white,
+                            side: BorderSide(
+                              color: const Color(
+                                0xFF81C784,
+                              ).withValues(alpha: 0.3),
+                            ),
                             onPressed: () {
                               _searchController.text = term;
                               _performSearch(term);
@@ -243,44 +278,55 @@ class _UserSearchScreenState extends State<UserSearchScreen>
           child: _isSearching
               ? const Center(child: CupertinoActivityIndicator())
               : _searchResults.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            CupertinoIcons.person_crop_circle_badge_plus,
-                            size: 56,
-                            color: const Color(0xFF81C784).withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _searchController.text.isEmpty
-                                ? 'Nhập @username để tìm kiếm người dùng'
-                                : 'Không tìm thấy người dùng.\nHãy kiểm tra lại tên người dùng.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: textColor.withValues(alpha: 0.6),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.person_crop_circle_badge_plus,
+                        size: 56,
+                        color: const Color(0xFF81C784).withValues(alpha: 0.4),
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _searchResults.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final target = _searchResults[index];
-                        return _buildUserCard(target, myProfile, isDark, cardColor, textColor);
-                      },
-                    ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _searchController.text.isEmpty
+                            ? 'Nhập biệt danh hoặc @username để tìm kiếm'
+                            : 'Không tìm thấy người dùng.\nHãy kiểm tra lại tên người dùng.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.6),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _searchResults.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final target = _searchResults[index];
+                    return _buildUserCard(
+                      target,
+                      myProfile,
+                      isDark,
+                      cardColor,
+                      textColor,
+                    );
+                  },
+                ),
         ),
       ],
     );
   }
 
-  Widget _buildFriendsTab(UserProfile? myProfile, bool isDark, Color cardColor, Color textColor) {
+  Widget _buildFriendsTab(
+    UserProfile? myProfile,
+    bool isDark,
+    Color cardColor,
+    Color textColor,
+  ) {
     if (myProfile == null || myProfile.friends.isEmpty) {
       return Center(
         child: Column(
@@ -293,7 +339,7 @@ class _UserSearchScreenState extends State<UserSearchScreen>
             ),
             const SizedBox(height: 12),
             Text(
-              'Bạn chưa có ai trong danh sách bạn bè.\nHãy nhập @username ở tab tìm kiếm để kết bạn!',
+              'Bạn chưa có ai trong danh sách bạn bè.\nHãy tìm bằng biệt danh hoặc @username để kết bạn!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: textColor.withValues(alpha: 0.6),
@@ -317,7 +363,13 @@ class _UserSearchScreenState extends State<UserSearchScreen>
             if (friend == null) return const SizedBox.shrink();
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
-              child: _buildUserCard(friend, myProfile, isDark, cardColor, textColor),
+              child: _buildUserCard(
+                friend,
+                myProfile,
+                isDark,
+                cardColor,
+                textColor,
+              ),
             );
           },
         );
@@ -336,9 +388,11 @@ class _UserSearchScreenState extends State<UserSearchScreen>
     final isMe = target.uid == currentUid;
     final isFriend = myProfile?.friends.contains(target.uid) ?? false;
     final isSent = myProfile?.sentRequests.contains(target.uid) ?? false;
-    final isReceived = myProfile?.receivedRequests.contains(target.uid) ?? false;
+    final isReceived =
+        myProfile?.receivedRequests.contains(target.uid) ?? false;
 
-    final avatarPath = target.avatarPath ?? '';
+    final avatarPath = target.preferredAvatar;
+    final hasRemoteAvatar = avatarPath.startsWith('http');
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -359,10 +413,14 @@ class _UserSearchScreenState extends State<UserSearchScreen>
           CircleAvatar(
             radius: 24,
             backgroundColor: const Color(0xFF81C784).withValues(alpha: 0.15),
-            backgroundImage: avatarPath.isNotEmpty ? NetworkImage(avatarPath) : null,
-            child: avatarPath.isEmpty
+            backgroundImage: hasRemoteAvatar
+                ? CachedNetworkImageProvider(avatarPath)
+                : null,
+            child: !hasRemoteAvatar
                 ? Text(
-                    target.displayName.isNotEmpty ? target.displayName[0].toUpperCase() : 'U',
+                    target.displayName.isNotEmpty
+                        ? target.displayName[0].toUpperCase()
+                        : 'U',
                     style: const TextStyle(
                       color: Color(0xFF81C784),
                       fontWeight: FontWeight.bold,
@@ -387,7 +445,10 @@ class _UserSearchScreenState extends State<UserSearchScreen>
                 ),
                 const SizedBox(height: 2),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF81C784).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -416,7 +477,10 @@ class _UserSearchScreenState extends State<UserSearchScreen>
               ),
               child: Text(
                 'Tài khoản của bạn',
-                style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: textColor.withValues(alpha: 0.6),
+                ),
               ),
             )
           else if (isFriend)
@@ -434,7 +498,10 @@ class _UserSearchScreenState extends State<UserSearchScreen>
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF81C784),
                 side: const BorderSide(color: Color(0xFF81C784)),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
             )
@@ -453,7 +520,10 @@ class _UserSearchScreenState extends State<UserSearchScreen>
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF81C784),
                 foregroundColor: const Color(0xFF0F1712),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
             )
@@ -461,10 +531,16 @@ class _UserSearchScreenState extends State<UserSearchScreen>
             ElevatedButton(
               onPressed: null,
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
-              child: const Text('Đã gửi lời mời', style: TextStyle(fontSize: 11)),
+              child: const Text(
+                'Đã gửi lời mời',
+                style: TextStyle(fontSize: 11),
+              ),
             )
           else
             FilledButton.icon(
@@ -481,7 +557,10 @@ class _UserSearchScreenState extends State<UserSearchScreen>
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF81C784),
                 foregroundColor: const Color(0xFF0F1712),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
             ),

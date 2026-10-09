@@ -13,6 +13,8 @@ abstract class CheckInRepository {
 
   Future<CheckInRoom?> getRoomById(String id);
 
+  Stream<CheckInRoom?> watchRoom(String id);
+
   Future<void> updateRoom(CheckInRoom room);
 
   Future<void> inviteMember(String roomId, CheckInMember member);

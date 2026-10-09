@@ -5,7 +5,7 @@ import 'package:dalattrip/constants/app_colors.dart';
 import '../../domain/entities/check_in_member.dart';
 import '../../domain/entities/check_in_room.dart';
 import '../../domain/repositories/check_in_repository.dart';
-import '../../data/repositories/local_check_in_repository.dart';
+import '../../data/repositories/firebase_realtime_check_in_repository.dart';
 
 class FriendPickerScreen extends StatefulWidget {
   final CheckInRoom room;
@@ -22,7 +22,8 @@ class FriendPickerScreen extends StatefulWidget {
 }
 
 class _FriendPickerScreenState extends State<FriendPickerScreen> {
-  final CheckInRepository _repository = LocalCheckInRepository.instance;
+  final CheckInRepository _repository =
+      FirebaseRealtimeCheckInRepository.instance;
   final TextEditingController _searchController = TextEditingController();
 
   late CheckInRoom _currentRoom;
@@ -80,7 +81,9 @@ class _FriendPickerScreenState extends State<FriendPickerScreen> {
   }
 
   Future<void> _toggleInvite(CheckInMember friend) async {
-    final isAlreadyMember = _currentRoom.members.any((m) => m.userId == friend.userId);
+    final isAlreadyMember = _currentRoom.members.any(
+      (m) => m.userId == friend.userId,
+    );
 
     if (isAlreadyMember) {
       await _repository.removeMember(_currentRoom.id, friend.userId);
@@ -146,7 +149,11 @@ class _FriendPickerScreenState extends State<FriendPickerScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(CupertinoIcons.info_circle_fill, color: Colors.amber, size: 18),
+                  Icon(
+                    CupertinoIcons.info_circle_fill,
+                    color: Colors.amber,
+                    size: 18,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Phòng đã đủ 4 thành viên',
@@ -189,8 +196,12 @@ class _FriendPickerScreenState extends State<FriendPickerScreen> {
                 );
 
                 final isMember = memberMatch.userId.isNotEmpty;
-                final isInvited = isMember && memberMatch.status == CheckInMemberStatus.invited;
-                final isJoined = isMember && memberMatch.status != CheckInMemberStatus.invited;
+                final isInvited =
+                    isMember &&
+                    memberMatch.status == CheckInMemberStatus.invited;
+                final isJoined =
+                    isMember &&
+                    memberMatch.status != CheckInMemberStatus.invited;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -244,7 +255,10 @@ class _FriendPickerScreenState extends State<FriendPickerScreen> {
                       // Nút Mời / Đã mời / Đã tham gia
                       if (isJoined)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2A3E33),
                             borderRadius: BorderRadius.circular(12),
@@ -273,7 +287,9 @@ class _FriendPickerScreenState extends State<FriendPickerScreen> {
                         )
                       else
                         FilledButton(
-                          onPressed: isFull ? null : () => _toggleInvite(friend),
+                          onPressed: isFull
+                              ? null
+                              : () => _toggleInvite(friend),
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             disabledBackgroundColor: Colors.grey.shade800,

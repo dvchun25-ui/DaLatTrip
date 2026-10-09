@@ -7,7 +7,7 @@ import 'package:dalattrip/constants/app_colors.dart';
 import 'package:dalattrip/features/check_in/domain/entities/check_in_entry.dart';
 import 'package:dalattrip/features/check_in/domain/entities/check_in_room.dart';
 import 'package:dalattrip/features/check_in/domain/repositories/check_in_repository.dart';
-import 'package:dalattrip/features/check_in/data/repositories/local_check_in_repository.dart';
+import 'package:dalattrip/features/check_in/data/repositories/firebase_realtime_check_in_repository.dart';
 import 'package:dalattrip/features/check_in/data/services/check_in_location_service.dart';
 import 'package:dalattrip/features/check_in/data/services/check_in_media_service.dart';
 import 'package:dalattrip/features/check_in/presentation/widgets/check_in_recipient_tile.dart';
@@ -37,7 +37,8 @@ class CheckInRecipientScreen extends StatefulWidget {
 }
 
 class _CheckInRecipientScreenState extends State<CheckInRecipientScreen> {
-  final CheckInRepository _repository = LocalCheckInRepository.instance;
+  final CheckInRepository _repository =
+      FirebaseRealtimeCheckInRepository.instance;
   final CheckInMediaService _mediaService = CheckInMediaService.instance;
 
   CheckInRoom? _room;
@@ -89,17 +90,21 @@ class _CheckInRecipientScreenState extends State<CheckInRecipientScreen> {
     try {
       final checkInId = 'checkin_${DateTime.now().millisecondsSinceEpoch}';
 
-      final persistentPath = await _mediaService.saveMedia(
+      final savedMedia = await _mediaService.saveMedia(
         roomId: widget.roomId,
         userId: widget.userId,
         checkInId: checkInId,
         sourceFile: widget.mediaFile,
         mediaType: widget.mediaType,
+        capturedAt: widget.capturedAt,
+        durationSeconds: widget.durationSeconds,
       );
 
       final entry = CheckInEntry(
         id: checkInId,
-        mediaPath: persistentPath,
+        mediaPath: savedMedia.primaryPath,
+        mediaUrl: savedMedia.mediaUrl,
+        localMediaPath: savedMedia.localPath,
         mediaType: widget.mediaType,
         capturedAt: widget.capturedAt,
         latitude: widget.locationInfo.latitude,
@@ -116,14 +121,24 @@ class _CheckInRecipientScreenState extends State<CheckInRecipientScreen> {
         entry: entry,
       );
 
+      if (!savedMedia.uploaded && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Đã lưu check-in trên máy nhưng chưa tải được lên cloud. Hãy thử lại khi có mạng.',
+            ),
+          ),
+        );
+      }
+
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi gửi check-in: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi gửi check-in: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -146,7 +161,11 @@ class _CheckInRecipientScreenState extends State<CheckInRecipientScreen> {
             shape: BoxShape.circle,
           ),
           child: IconButton(
-            icon: const Icon(CupertinoIcons.xmark, color: Colors.white, size: 18),
+            icon: const Icon(
+              CupertinoIcons.xmark,
+              color: Colors.white,
+              size: 18,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -192,7 +211,10 @@ class _CheckInRecipientScreenState extends State<CheckInRecipientScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Container(
                     height: 165,
                     decoration: BoxDecoration(
@@ -204,10 +226,7 @@ class _CheckInRecipientScreenState extends State<CheckInRecipientScreen> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.file(
-                            widget.mediaFile,
-                            fit: BoxFit.cover,
-                          ),
+                          Image.file(widget.mediaFile, fit: BoxFit.cover),
                           Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -287,7 +306,9 @@ class _CheckInRecipientScreenState extends State<CheckInRecipientScreen> {
                     itemCount: room.members.length,
                     itemBuilder: (context, index) {
                       final member = room.members[index];
-                      final isSelected = _selectedUserIds.contains(member.userId);
+                      final isSelected = _selectedUserIds.contains(
+                        member.userId,
+                      );
                       return CheckInRecipientTile(
                         member: member,
                         isSelected: isSelected,

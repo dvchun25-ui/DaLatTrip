@@ -12,35 +12,51 @@ class UserFirestoreService {
 
   final FirestoreUserRepository _repo = FirestoreUserRepository.instance;
 
-  Future<UserProfile?> syncUserProfile(User user) => _repo.syncUserProfile(user);
+  Future<UserProfile?> syncUserProfile(User user) =>
+      _repo.syncUserProfile(user);
 
   Future<UserProfile?> getUserProfile(String uid) => _repo.getUserProfile(uid);
 
-  Future<UserProfile?> getUserByUsername(String username) => _repo.getUserByUsername(username);
+  Future<UserProfile?> getUserByUsername(String username) =>
+      _repo.getUserByUsername(username);
 
-  Stream<UserProfile?> streamUserProfile(String uid) => _repo.streamUserProfile(uid);
+  Stream<UserProfile?> streamUserProfile(String uid) =>
+      _repo.streamUserProfile(uid);
 
-  Future<List<UserProfile>> searchUsers(String query) => _repo.searchUsers(query);
+  Future<List<UserProfile>> searchUsers(String query) =>
+      _repo.searchUsers(query);
 
-  Future<bool> isUsernameAvailable(String username) => _repo.isUsernameAvailable(username);
+  Future<bool> isUsernameAvailable(String username) =>
+      _repo.isUsernameAvailable(username);
 
-  Future<void> updateUsername(String uid, String newUsername) => _repo.updateUsername(uid, newUsername);
+  Future<void> updateUsername(String uid, String newUsername) =>
+      _repo.updateUsername(uid, newUsername);
+
+  Future<void> updateUserIdentity({
+    required String uid,
+    required String displayName,
+    required String newUsername,
+  }) => _repo.updateUserIdentity(
+    uid: uid,
+    displayName: displayName,
+    newUsername: newUsername,
+  );
+
+  Future<void> updateAvatarUrl(String uid, String avatarUrl) =>
+      _repo.updateAvatarUrl(uid, avatarUrl);
 
   Future<void> sendFriendRequest({
     required String currentUid,
     required String targetUid,
-  }) =>
-      _repo.sendFriendRequest(currentUid: currentUid, targetUid: targetUid);
+  }) => _repo.sendFriendRequest(currentUid: currentUid, targetUid: targetUid);
 
   Future<void> acceptFriendRequest({
     required String currentUid,
     required String targetUid,
-  }) =>
-      _repo.acceptFriendRequest(currentUid: currentUid, targetUid: targetUid);
+  }) => _repo.acceptFriendRequest(currentUid: currentUid, targetUid: targetUid);
 
   Future<void> removeFriend({
     required String currentUid,
     required String targetUid,
-  }) =>
-      _repo.removeFriend(currentUid: currentUid, targetUid: targetUid);
+  }) => _repo.removeFriend(currentUid: currentUid, targetUid: targetUid);
 }

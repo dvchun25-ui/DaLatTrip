@@ -2,12 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:dalattrip/core/utils/search_text_utils.dart';
 import 'package:dalattrip/core/utils/username_utils.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/user_repository.dart';
 
 class FirestoreUserRepository implements UserRepository {
-  static final FirestoreUserRepository instance = FirestoreUserRepository._internal();
+  static final FirestoreUserRepository instance =
+      FirestoreUserRepository._internal();
   factory FirestoreUserRepository() => instance;
   FirestoreUserRepository._internal();
 
@@ -51,9 +53,15 @@ class FirestoreUserRepository implements UserRepository {
       }
 
       // Fallback query if username lock missing
-      final snap = await _usersCol.where('username', isEqualTo: cleanUsername).limit(1).get();
+      final snap = await _usersCol
+          .where('username', isEqualTo: cleanUsername)
+          .limit(1)
+          .get();
       if (snap.docs.isNotEmpty) {
-        return UserProfile.fromFirestore(snap.docs.first.data(), snap.docs.first.id);
+        return UserProfile.fromFirestore(
+          snap.docs.first.data(),
+          snap.docs.first.id,
+        );
       }
     } catch (e) {
       debugPrint('Lỗi getUserByUsername: $e');
@@ -95,10 +103,19 @@ class FirestoreUserRepository implements UserRepository {
         }
 
         final updatedData = <String, dynamic>{
-          if (user.displayName != null && user.displayName!.isNotEmpty && existing.displayName == 'Người dùng DaLatTrip')
+          if (user.displayName != null &&
+              user.displayName!.isNotEmpty &&
+              existing.displayName == 'Người dùng DaLatTrip')
             'displayName': user.displayName,
-          if (user.photoURL != null && user.photoURL!.isNotEmpty && (existing.avatarPath == null || existing.avatarPath!.isEmpty))
-            'avatarPath': user.photoURL,
+          'displayNameNormalized': SearchTextUtils.normalize(
+            (user.displayName != null && user.displayName!.isNotEmpty)
+                ? user.displayName!
+                : existing.displayName,
+          ),
+          if (user.photoURL != null &&
+              user.photoURL!.isNotEmpty &&
+              (existing.avatarUrl == null || existing.avatarUrl!.isEmpty))
+            'avatarUrl': user.photoURL,
           'email': user.email ?? existing.email,
           'updatedAt': FieldValue.serverTimestamp(),
         };
@@ -125,16 +142,25 @@ class FirestoreUserRepository implements UserRepository {
           uid: user.uid,
           email: email,
           username: candidateUsername,
-          displayName: (user.displayName != null && user.displayName!.isNotEmpty)
+          displayName:
+              (user.displayName != null && user.displayName!.isNotEmpty)
               ? user.displayName!
-              : (email.contains('@') ? email.split('@').first : 'Khách du lịch'),
+              : (email.contains('@')
+                    ? email.split('@').first
+                    : 'Khách du lịch'),
+          avatarUrl: user.photoURL,
           avatarPath: user.photoURL ?? '',
           createdAt: now,
           updatedAt: now,
         );
 
         final batch = _firestore.batch();
-        batch.set(docRef, newProfile.toFirestore());
+        batch.set(docRef, {
+          ...newProfile.toFirestore(),
+          'displayNameNormalized': SearchTextUtils.normalize(
+            newProfile.displayName,
+          ),
+        });
         batch.set(_usernamesCol.doc(candidateUsername), {
           'uid': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
@@ -149,13 +175,48 @@ class FirestoreUserRepository implements UserRepository {
     }
   }
 
+  Future<void> updateAvatarUrl(String uid, String avatarUrl) async {
+    if (!avatarUrl.startsWith('https://')) {
+      throw ArgumentError.value(
+        avatarUrl,
+        'avatarUrl',
+        'Avatar URL phải dùng HTTPS.',
+      );
+    }
+    await _usersCol.doc(uid).set({
+      'avatarUrl': avatarUrl,
+      'photoUrl': avatarUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   @override
   Future<void> updateUsername(String uid, String newUsername) async {
+    final profile = await getUserByUid(uid);
+    if (profile == null) {
+      throw Exception('Không tìm thấy tài khoản người dùng.');
+    }
+    await updateUserIdentity(
+      uid: uid,
+      displayName: profile.displayName,
+      newUsername: newUsername,
+    );
+  }
+
+  Future<void> updateUserIdentity({
+    required String uid,
+    required String displayName,
+    required String newUsername,
+  }) async {
     final cleanNewUsername = UsernameUtils.normalizeUsername(newUsername);
     final validationError = UsernameUtils.validateUsername(cleanNewUsername);
+    final cleanDisplayName = displayName.trim().replaceAll(RegExp(r'\s+'), ' ');
 
     if (validationError != null) {
       throw Exception(validationError);
+    }
+    if (cleanDisplayName.length < 2 || cleanDisplayName.length > 40) {
+      throw Exception('Biệt danh phải có từ 2 đến 40 ký tự.');
     }
 
     return _firestore.runTransaction((transaction) async {
@@ -167,39 +228,39 @@ class FirestoreUserRepository implements UserRepository {
       }
 
       final currentData = userSnap.data()!;
-      final oldUsername = currentData['username']?.toString() ?? currentData['userId']?.toString() ?? '';
+      final oldUsername =
+          currentData['username']?.toString() ??
+          currentData['userId']?.toString() ??
+          '';
 
-      if (oldUsername == cleanNewUsername) {
-        return; // Không đổi
-      }
+      if (oldUsername != cleanNewUsername) {
+        final newLockRef = _usernamesCol.doc(cleanNewUsername);
+        final newLockSnap = await transaction.get(newLockRef);
 
-      // Kiểm tra xem username mới đã bị ai sử dụng chưa
-      final newLockRef = _usernamesCol.doc(cleanNewUsername);
-      final newLockSnap = await transaction.get(newLockRef);
-
-      if (newLockSnap.exists) {
-        final existingUid = newLockSnap.data()?['uid'];
-        if (existingUid != uid) {
-          throw Exception('Tên người dùng đã được sử dụng. Vui lòng chọn tên khác.');
+        if (newLockSnap.exists) {
+          final existingUid = newLockSnap.data()?['uid'];
+          if (existingUid != uid) {
+            throw Exception(
+              'Tên người dùng đã được sử dụng. Vui lòng chọn tên khác.',
+            );
+          }
         }
+
+        if (oldUsername.isNotEmpty) {
+          transaction.delete(_usernamesCol.doc(oldUsername));
+        }
+
+        transaction.set(newLockRef, {
+          'uid': uid,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       }
 
-      // Xóa lock cũ nếu có
-      if (oldUsername.isNotEmpty) {
-        final oldLockRef = _usernamesCol.doc(oldUsername);
-        transaction.delete(oldLockRef);
-      }
-
-      // Đặt lock mới
-      transaction.set(newLockRef, {
-        'uid': uid,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Update user doc
       transaction.update(userDocRef, {
         'username': cleanNewUsername,
         'userId': cleanNewUsername,
+        'displayName': cleanDisplayName,
+        'displayNameNormalized': SearchTextUtils.normalize(cleanDisplayName),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
@@ -207,36 +268,63 @@ class FirestoreUserRepository implements UserRepository {
 
   @override
   Future<List<UserProfile>> searchUsers(String keyword) async {
-    var cleanKeyword = keyword.trim().toLowerCase();
-    if (cleanKeyword.startsWith('@')) {
-      cleanKeyword = cleanKeyword.substring(1);
+    var usernameKeyword = keyword.trim().toLowerCase();
+    if (usernameKeyword.startsWith('@')) {
+      usernameKeyword = usernameKeyword.substring(1);
     }
-    cleanKeyword = UsernameUtils.normalizeUsername(cleanKeyword);
+    usernameKeyword = UsernameUtils.normalizeUsername(usernameKeyword);
+    final nicknameKeyword = SearchTextUtils.normalize(
+      keyword.replaceFirst('@', ''),
+    );
 
-    if (cleanKeyword.isEmpty) return [];
+    if (usernameKeyword.isEmpty && nicknameKeyword.isEmpty) return [];
 
     try {
       final resultsMap = <String, UserProfile>{};
 
-      // 1. Tìm kiếm theo username prefix
-      final usernameSnap = await _usersCol
-          .where('username', isGreaterThanOrEqualTo: cleanKeyword)
-          .where('username', isLessThanOrEqualTo: '$cleanKeyword\uf8ff')
-          .limit(20)
-          .get();
+      if (usernameKeyword.isNotEmpty) {
+        final usernameSnap = await _usersCol
+            .where('username', isGreaterThanOrEqualTo: usernameKeyword)
+            .where('username', isLessThanOrEqualTo: '$usernameKeyword\uf8ff')
+            .limit(20)
+            .get();
 
-      for (var doc in usernameSnap.docs) {
-        final user = UserProfile.fromFirestore(doc.data(), doc.id);
-        resultsMap[user.uid] = user;
+        for (final doc in usernameSnap.docs) {
+          final user = UserProfile.fromFirestore(doc.data(), doc.id);
+          resultsMap[user.uid] = user;
+        }
       }
 
-      // 2. Tìm kiếm phụ trợ theo displayName (không tìm theo email!)
-      final rawQuery = keyword.trim().toLowerCase();
-      final allDocs = await _usersCol.limit(50).get();
-      for (var doc in allDocs.docs) {
+      if (nicknameKeyword.isNotEmpty) {
+        final nicknameSnap = await _usersCol
+            .where(
+              'displayNameNormalized',
+              isGreaterThanOrEqualTo: nicknameKeyword,
+            )
+            .where(
+              'displayNameNormalized',
+              isLessThanOrEqualTo: '$nicknameKeyword\uf8ff',
+            )
+            .limit(20)
+            .get();
+        for (final doc in nicknameSnap.docs) {
+          final user = UserProfile.fromFirestore(doc.data(), doc.id);
+          resultsMap[user.uid] = user;
+        }
+      }
+
+      // Hỗ trợ hồ sơ cũ chưa có displayNameNormalized và tìm chứa từ khóa.
+      final allDocs = await _usersCol.limit(100).get();
+      for (final doc in allDocs.docs) {
         final user = UserProfile.fromFirestore(doc.data(), doc.id);
-        final matchesName = user.displayName.toLowerCase().contains(rawQuery);
-        final matchesUsername = user.username.toLowerCase().contains(cleanKeyword);
+        final matchesName =
+            nicknameKeyword.isNotEmpty &&
+            SearchTextUtils.normalize(
+              user.displayName,
+            ).contains(nicknameKeyword);
+        final matchesUsername =
+            usernameKeyword.isNotEmpty &&
+            user.username.toLowerCase().contains(usernameKeyword);
         if (matchesName || matchesUsername) {
           resultsMap[user.uid] = user;
         }

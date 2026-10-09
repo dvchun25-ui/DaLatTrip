@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -49,14 +50,18 @@ class _CheckInMemberCardState extends State<CheckInMemberCard> {
 
     if (entry != null &&
         entry.mediaType == CheckInMediaType.video &&
-        entry.mediaPath.isNotEmpty &&
-        File(entry.mediaPath).existsSync()) {
-      _videoController = VideoPlayerController.file(File(entry.mediaPath))
-        ..initialize().then((_) {
-          if (mounted) setState(() {});
-          _videoController?.setLooping(true);
-          _videoController?.play();
-        });
+        entry.mediaPath.isNotEmpty) {
+      _videoController = entry.mediaPath.startsWith('http')
+          ? VideoPlayerController.networkUrl(Uri.parse(entry.mediaPath))
+          : File(entry.mediaPath).existsSync()
+          ? VideoPlayerController.file(File(entry.mediaPath))
+          : null;
+      final controller = _videoController;
+      controller?.initialize().then((_) {
+        if (mounted) setState(() {});
+        controller.setLooping(true);
+        controller.play();
+      });
     }
   }
 
@@ -188,9 +193,13 @@ class _CheckInMemberCardState extends State<CheckInMemberCard> {
                               height: 44,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: const Color(0xFF23362C).withValues(alpha: 0.8),
+                                color: const Color(
+                                  0xFF23362C,
+                                ).withValues(alpha: 0.8),
                                 border: Border.all(
-                                  color: const Color(0xFF81C784).withValues(alpha: 0.4),
+                                  color: const Color(
+                                    0xFF81C784,
+                                  ).withValues(alpha: 0.4),
                                   width: 1.5,
                                 ),
                               ),
@@ -202,7 +211,9 @@ class _CheckInMemberCardState extends State<CheckInMemberCard> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              widget.isCurrentUserSlot ? 'Nhấn để chụp' : 'Mời bạn',
+                              widget.isCurrentUserSlot
+                                  ? 'Nhấn để chụp'
+                                  : 'Mời bạn',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.85),
                                 fontSize: 13,
@@ -309,11 +320,19 @@ class _CheckInMemberCardState extends State<CheckInMemberCard> {
             child: VideoPlayer(_videoController!),
           ),
         );
-      } else if (entry.mediaPath.isNotEmpty && File(entry.mediaPath).existsSync()) {
-        return Image.file(
-          File(entry.mediaPath),
+      } else if (entry.mediaPath.startsWith('http')) {
+        return CachedNetworkImage(
+          imageUrl: entry.mediaPath,
           fit: BoxFit.cover,
+          placeholder: (_, __) => const ColoredBox(color: Color(0xFF141F1A)),
+          errorWidget: (_, __, ___) => Image.asset(
+            'assets/images/dalat_splash_bg.jpg',
+            fit: BoxFit.cover,
+          ),
         );
+      } else if (entry.mediaPath.isNotEmpty &&
+          File(entry.mediaPath).existsSync()) {
+        return Image.file(File(entry.mediaPath), fit: BoxFit.cover);
       } else {
         return Image.asset(
           'assets/images/dalat_splash_bg.jpg',
@@ -349,15 +368,22 @@ class _CheckInMemberCardState extends State<CheckInMemberCard> {
     }
 
     final avatarPath = member.avatarPath;
-    final hasLocalAvatar = avatarPath != null &&
+    final hasRemoteAvatar = avatarPath?.startsWith('http') ?? false;
+    final hasLocalAvatar =
+        avatarPath != null &&
         avatarPath.isNotEmpty &&
+        !hasRemoteAvatar &&
         File(avatarPath).existsSync();
 
     return CircleAvatar(
       radius: 18,
       backgroundColor: AppColors.primary,
-      backgroundImage: hasLocalAvatar ? FileImage(File(avatarPath)) : null,
-      child: !hasLocalAvatar
+      backgroundImage: hasRemoteAvatar
+          ? CachedNetworkImageProvider(avatarPath!)
+          : hasLocalAvatar
+          ? FileImage(File(avatarPath))
+          : null,
+      child: !hasLocalAvatar && !hasRemoteAvatar
           ? Text(
               member.displayName.isNotEmpty
                   ? member.displayName[0].toUpperCase()

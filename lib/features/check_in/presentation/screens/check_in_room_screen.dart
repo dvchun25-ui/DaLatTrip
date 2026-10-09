@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -5,7 +8,7 @@ import 'package:dalattrip/constants/app_colors.dart';
 import 'package:dalattrip/features/check_in/domain/entities/check_in_member.dart';
 import 'package:dalattrip/features/check_in/domain/entities/check_in_room.dart';
 import 'package:dalattrip/features/check_in/domain/repositories/check_in_repository.dart';
-import 'package:dalattrip/features/check_in/data/repositories/local_check_in_repository.dart';
+import 'package:dalattrip/features/check_in/data/repositories/firebase_realtime_check_in_repository.dart';
 
 import '../widgets/check_in_member_card.dart';
 import 'check_in_camera_screen.dart';
@@ -20,14 +23,16 @@ class CheckInRoomScreen extends StatefulWidget {
 }
 
 class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
-  final CheckInRepository _repository = LocalCheckInRepository.instance;
+  final CheckInRepository _repository =
+      FirebaseRealtimeCheckInRepository.instance;
 
   CheckInRoom? _currentRoom;
   bool _isLoading = true;
   bool _showSuccessToast = false;
 
-  // Giả lập user ID hiện tại của ứng dụng
-  static const String _currentUserId = 'chung_user';
+  StreamSubscription<CheckInRoom?>? _roomSubscription;
+
+  String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
@@ -43,6 +48,15 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
         _currentRoom = rooms.firstOrNull;
         _isLoading = false;
       });
+      final room = _currentRoom;
+      if (room != null) {
+        await _roomSubscription?.cancel();
+        _roomSubscription = _repository.watchRoom(room.id).listen((updated) {
+          if (mounted && updated != null) {
+            setState(() => _currentRoom = updated);
+          }
+        });
+      }
     }
   }
 
@@ -57,15 +71,20 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
     final room = _currentRoom;
     if (room == null) return;
 
-    final isOwnerOrMe = member?.userId == _currentUserId || slotIndex == 0;
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bạn cần đăng nhập để check-in.')),
+      );
+      return;
+    }
+    final isOwnerOrMe = member?.userId == currentUserId || slotIndex == 0;
 
     if (isOwnerOrMe) {
       await Navigator.of(context).push(
         CupertinoPageRoute(
-          builder: (_) => CheckInCameraScreen(
-            roomId: room.id,
-            userId: _currentUserId,
-          ),
+          builder: (_) =>
+              CheckInCameraScreen(roomId: room.id, userId: currentUserId),
         ),
       );
       await _loadData();
@@ -73,10 +92,8 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
     } else if (member == null || member.status == CheckInMemberStatus.invited) {
       await Navigator.of(context).push(
         CupertinoPageRoute(
-          builder: (_) => FriendPickerScreen(
-            room: room,
-            onRoomUpdated: _loadData,
-          ),
+          builder: (_) =>
+              FriendPickerScreen(room: room, onRoomUpdated: _loadData),
         ),
       );
       await _loadData();
@@ -96,7 +113,9 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
       builder: (context) {
         return CupertinoActionSheet(
           title: Text('Check-in của ${member.displayName}'),
-          message: Text('${entry.placeName} • ${_formatTime(entry.capturedAt)}'),
+          message: Text(
+            '${entry.placeName} • ${_formatTime(entry.capturedAt)}',
+          ),
           actions: [
             CupertinoActionSheetAction(
               onPressed: () => Navigator.of(context).pop(),
@@ -130,16 +149,25 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
                 duration: const Duration(milliseconds: 300),
                 opacity: _showSuccessToast ? 1.0 : 0.0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF263D31),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF81C784).withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: const Color(0xFF81C784).withValues(alpha: 0.5),
+                    ),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(CupertinoIcons.checkmark_alt_circle_fill, color: Color(0xFF81C784), size: 16),
+                      Icon(
+                        CupertinoIcons.checkmark_alt_circle_fill,
+                        color: Color(0xFF81C784),
+                        size: 16,
+                      ),
                       SizedBox(width: 6),
                       Text(
                         'Đã gửi check-in',
@@ -159,37 +187,49 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: AppColors.primary),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
                     )
                   : room == null
-                      ? const Center(
-                          child: Text(
-                            'Chưa có phòng check-in nào',
-                            style: TextStyle(color: Colors.white54),
-                          ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          itemCount: 4,
-                          separatorBuilder: (_, __) => const SizedBox(height: 14),
-                          itemBuilder: (context, index) {
-                            final member = (index < room.members.length)
-                                ? room.members[index]
-                                : null;
-                            final isMe = index == 0 || member?.userId == _currentUserId;
+                  ? const Center(
+                      child: Text(
+                        'Chưa có phòng check-in nào',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: 4,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
+                      itemBuilder: (context, index) {
+                        final member = (index < room.members.length)
+                            ? room.members[index]
+                            : null;
+                        final isMe =
+                            index == 0 || member?.userId == _currentUserId;
 
-                            return CheckInMemberCard(
-                              member: member,
-                              isCurrentUserSlot: isMe,
-                              onTap: () => _onCardTapped(index, member),
-                            );
-                          },
-                        ),
+                        return CheckInMemberCard(
+                          member: member,
+                          isCurrentUserSlot: isMe,
+                          onTap: () => _onCardTapped(index, member),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _roomSubscription?.cancel();
+    super.dispose();
   }
 
   Widget _buildHeaderBar(CheckInRoom? room) {
@@ -212,13 +252,13 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildIconButton(
-                    icon: CupertinoIcons.calendar,
-                    onTap: () {},
-                  ),
+                  _buildIconButton(icon: CupertinoIcons.calendar, onTap: () {}),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1B2822),
                       borderRadius: BorderRadius.circular(20),
@@ -251,10 +291,7 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildIconButton(
-                    icon: CupertinoIcons.share,
-                    onTap: () {},
-                  ),
+                  _buildIconButton(icon: CupertinoIcons.share, onTap: () {}),
                   const SizedBox(width: 8),
                   _buildIconButton(
                     icon: CupertinoIcons.chat_bubble,
@@ -307,9 +344,7 @@ class _CheckInRoomScreenState extends State<CheckInRoomScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF1B2822),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: IconButton(
         icon: Icon(icon, color: Colors.white, size: 18),

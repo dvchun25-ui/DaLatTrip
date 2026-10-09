@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
 import 'package:dalattrip/core/utils/username_utils.dart';
 import 'package:dalattrip/features/profile/data/repositories/firestore_user_repository.dart';
 import 'package:dalattrip/features/profile/domain/entities/user_profile.dart';
@@ -8,60 +10,74 @@ import 'package:dalattrip/features/profile/domain/entities/user_profile.dart';
 class EditUsernameScreen extends StatefulWidget {
   final UserProfile profile;
 
-  const EditUsernameScreen({
-    super.key,
-    required this.profile,
-  });
+  const EditUsernameScreen({super.key, required this.profile});
 
   @override
   State<EditUsernameScreen> createState() => _EditUsernameScreenState();
 }
 
 class _EditUsernameScreenState extends State<EditUsernameScreen> {
-  late TextEditingController _controller;
+  late final TextEditingController _displayNameController;
+  late final TextEditingController _usernameController;
   Timer? _debounceTimer;
 
   bool _isChecking = false;
   bool _isSaving = false;
-  String? _validationError;
-  bool _isAvailable = false;
-  String _currentNormalized = '';
+  bool _isAvailable = true;
+  String? _usernameError;
+
+  String get _normalizedUsername =>
+      UsernameUtils.normalizeUsername(_usernameController.text);
+  String get _displayName =>
+      _displayNameController.text.trim().replaceAll(RegExp(r'\s+'), ' ');
+  bool get _displayNameValid =>
+      _displayName.length >= 2 && _displayName.length <= 40;
+  bool get _hasChanges =>
+      _normalizedUsername != widget.profile.username ||
+      _displayName != widget.profile.displayName;
+  bool get _canSave =>
+      !_isSaving &&
+      !_isChecking &&
+      _usernameError == null &&
+      _displayNameValid &&
+      _normalizedUsername.isNotEmpty &&
+      _isAvailable &&
+      _hasChanges;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.profile.username);
-    _currentNormalized = widget.profile.username;
+    _displayNameController = TextEditingController(
+      text: widget.profile.displayName,
+    );
+    _usernameController = TextEditingController(text: widget.profile.username);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _displayNameController.dispose();
+    _usernameController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
   }
 
+  void _onDisplayNameChanged(String _) => setState(() {});
+
   void _onUsernameChanged(String value) {
     _debounceTimer?.cancel();
     final normalized = UsernameUtils.normalizeUsername(value);
-
-    setState(() {
-      _currentNormalized = normalized;
-      _isAvailable = false;
-    });
-
     final error = UsernameUtils.validateUsername(value);
     if (error != null) {
       setState(() {
-        _validationError = error;
+        _usernameError = error;
         _isChecking = false;
+        _isAvailable = false;
       });
       return;
     }
-
     if (normalized == widget.profile.username) {
       setState(() {
-        _validationError = null;
+        _usernameError = null;
         _isChecking = false;
         _isAvailable = true;
       });
@@ -69,248 +85,201 @@ class _EditUsernameScreenState extends State<EditUsernameScreen> {
     }
 
     setState(() {
-      _validationError = null;
+      _usernameError = null;
       _isChecking = true;
+      _isAvailable = false;
     });
-
     _debounceTimer = Timer(const Duration(milliseconds: 400), () async {
-      final available = await FirestoreUserRepository.instance.isUsernameAvailable(normalized);
-      if (mounted && _currentNormalized == normalized) {
-        setState(() {
-          _isChecking = false;
-          _isAvailable = available;
-          if (!available) {
-            _validationError = 'Tên người dùng đã được sử dụng. Vui lòng chọn tên khác.';
-          }
-        });
-      }
+      final available = await FirestoreUserRepository.instance
+          .isUsernameAvailable(normalized);
+      if (!mounted || _normalizedUsername != normalized) return;
+      setState(() {
+        _isChecking = false;
+        _isAvailable = available;
+        _usernameError = available
+            ? null
+            : 'Tên người dùng đã được sử dụng. Vui lòng chọn tên khác.';
+      });
     });
   }
 
-  Future<void> _saveUsername() async {
-    final error = UsernameUtils.validateUsername(_controller.text);
-    if (error != null) {
+  Future<void> _save() async {
+    if (!_displayNameValid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: Colors.redAccent),
+        const SnackBar(content: Text('Biệt danh phải có từ 2 đến 40 ký tự.')),
       );
       return;
     }
-
-    final newUsername = UsernameUtils.normalizeUsername(_controller.text);
-    if (newUsername == widget.profile.username) {
-      Navigator.of(context).pop();
+    final usernameError = UsernameUtils.validateUsername(
+      _usernameController.text,
+    );
+    if (usernameError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(usernameError)));
       return;
     }
 
     setState(() => _isSaving = true);
-
     try {
-      await FirestoreUserRepository.instance.updateUsername(widget.profile.uid, newUsername);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đã đổi tên người dùng thành @$newUsername'),
-            backgroundColor: const Color(0xFF81C784),
-          ),
-        );
-        Navigator.of(context).pop(true);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+      await FirestoreUserRepository.instance.updateUserIdentity(
+        uid: widget.profile.uid,
+        displayName: _displayName,
+        newUsername: _normalizedUsername,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã cập nhật biệt danh và tên người dùng.'),
+          backgroundColor: Color(0xFF81C784),
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0F1712) : const Color(0xFFF5F7F5);
-    final cardColor = isDark ? const Color(0xFF1B2822) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF18251F);
-
-    final canSave = !_isSaving &&
-        !_isChecking &&
-        _validationError == null &&
-        _currentNormalized.isNotEmpty &&
-        _currentNormalized != widget.profile.username &&
-        _isAvailable;
+    final background = isDark
+        ? const Color(0xFF0F1712)
+        : const Color(0xFFF5F7F5);
+    final card = isDark ? const Color(0xFF1B2822) : Colors.white;
+    final text = isDark ? Colors.white : const Color(0xFF18251F);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: background,
       appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
+        backgroundColor: background,
         leading: IconButton(
-          icon: Icon(CupertinoIcons.chevron_left, color: textColor),
+          icon: Icon(CupertinoIcons.chevron_left, color: text),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Đổi Tên Người Dùng',
-          style: TextStyle(
-            color: textColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          'Chỉnh sửa hồ sơ',
+          style: TextStyle(color: text, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tên người dùng mới',
-                      style: TextStyle(
-                        color: textColor.withValues(alpha: 0.7),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF141F1A) : const Color(0xFFEFEFEF),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: _validationError != null
-                              ? Colors.redAccent
-                              : (_isAvailable
-                                  ? const Color(0xFF81C784)
-                                  : Colors.transparent),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Text(
-                            '@ ',
-                            style: TextStyle(
-                              color: Color(0xFF81C784),
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: _controller,
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                hintText: 'vchun_211',
-                                hintStyle: TextStyle(color: Colors.grey),
-                              ),
-                              onChanged: _onUsernameChanged,
-                            ),
-                          ),
-                          if (_isChecking)
-                            const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF81C784),
-                              ),
-                            )
-                          else if (_isAvailable && _currentNormalized != widget.profile.username)
-                            const Icon(CupertinoIcons.checkmark_alt_circle_fill, color: Color(0xFF81C784), size: 22)
-                          else if (_validationError != null)
-                            const Icon(CupertinoIcons.exclamationmark_circle_fill, color: Colors.redAccent, size: 22),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_validationError != null)
-                      Text(
-                        _validationError!,
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      )
-                    else if (_isAvailable && _currentNormalized != widget.profile.username)
-                      const Text(
-                        '✓ Tên người dùng khả dụng',
-                        style: TextStyle(
-                          color: Color(0xFF81C784),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    else
-                      Text(
-                        'Username từ 4-20 ký tự, bao gồm chữ cái (a-z), số (0-9), dấu _ và dấu .',
-                        style: TextStyle(
-                          color: textColor.withValues(alpha: 0.5),
-                          fontSize: 12,
-                        ),
-                      ),
-                  ],
-                ),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: card,
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: canSave ? _saveUsername : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF81C784),
-                    disabledBackgroundColor: (isDark ? const Color(0xFF1B2822) : Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Biệt danh',
+                    style: TextStyle(color: text, fontWeight: FontWeight.w700),
                   ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Text(
-                          'Lưu thay đổi',
-                          style: TextStyle(
-                            color: canSave ? const Color(0xFF0F1712) : Colors.grey,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _displayNameController,
+                    maxLength: 40,
+                    textCapitalization: TextCapitalization.words,
+                    onChanged: _onDisplayNameChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Tên hiển thị để bạn bè tìm kiếm',
+                      errorText:
+                          _displayNameController.text.isNotEmpty &&
+                              !_displayNameValid
+                          ? 'Biệt danh cần từ 2 đến 40 ký tự'
+                          : null,
+                      filled: true,
+                      fillColor: background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Tên người dùng duy nhất',
+                    style: TextStyle(color: text, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _usernameController,
+                    onChanged: _onUsernameChanged,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      prefixText: '@ ',
+                      hintText: 'dalat_traveler',
+                      errorText: _usernameError,
+                      suffixIcon: _isChecking
+                          ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : _isAvailable &&
+                                _normalizedUsername != widget.profile.username
+                          ? const Icon(
+                              CupertinoIcons.checkmark_alt_circle_fill,
+                              color: Color(0xFF81C784),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bạn bè có thể tìm bằng biệt danh hoặc @username.',
+                    style: TextStyle(
+                      color: text.withValues(alpha: 0.55),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: _canSave ? _save : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF81C784),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Lưu thay đổi',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );

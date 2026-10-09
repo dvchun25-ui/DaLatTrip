@@ -1,0 +1,56 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "typing": {
+      "$conversationId": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "checkin_rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        "name": {
+          ".write": "auth != null && (newData.parent().child('ownerId').val() === auth.uid || root.child('checkin_rooms').child($roomId).child('ownerId').val() === auth.uid)"
+        },
+        "ownerId": {
+          ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || data.val() === auth.uid)"
+        },
+        "createdAt": {
+          ".write": "auth != null && (newData.parent().child('ownerId').val() === auth.uid || root.child('checkin_rooms').child($roomId).child('ownerId').val() === auth.uid)"
+        },
+        "members": {
+          "$uid": {
+            ".write": "auth != null && (auth.uid === $uid || newData.parent().parent().child('ownerId').val() === auth.uid || root.child('checkin_rooms').child($roomId).child('ownerId').val() === auth.uid)"
+          }
+        },
+        "entries": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "!newData.exists() || (newData.hasChildren(['id', 'mediaUrl', 'mediaType', 'capturedAt']) && newData.child('mediaUrl').isString())"
+          }
+        }
+      }
+    },
+    "chats": {
+      "$conversationId": {
+        ".read": "auth != null",
+        "messages": {
+          "$messageId": {
+            ".write": "auth != null && newData.child('senderId').val() === auth.uid",
+            ".validate": "newData.hasChildren(['messageId', 'senderId', 'type', 'createdAt'])"
+          }
+        }
+      }
+    }
+  }
+}

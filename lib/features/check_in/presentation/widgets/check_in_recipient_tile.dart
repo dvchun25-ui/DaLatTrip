@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/check_in_member.dart';
@@ -18,8 +19,11 @@ class CheckInRecipientTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarPath = member.avatarPath;
-    final hasLocalAvatar = avatarPath != null &&
+    final hasRemoteAvatar = avatarPath?.startsWith('http') ?? false;
+    final hasLocalAvatar =
+        avatarPath != null &&
         avatarPath.isNotEmpty &&
+        !hasRemoteAvatar &&
         File(avatarPath).existsSync();
 
     return GestureDetector(
@@ -42,8 +46,12 @@ class CheckInRecipientTile extends StatelessWidget {
             CircleAvatar(
               radius: 24,
               backgroundColor: const Color(0xFF2D3E35),
-              backgroundImage: hasLocalAvatar ? FileImage(File(avatarPath)) : null,
-              child: !hasLocalAvatar
+              backgroundImage: hasRemoteAvatar
+                  ? CachedNetworkImageProvider(avatarPath!)
+                  : hasLocalAvatar
+                  ? FileImage(File(avatarPath))
+                  : null,
+              child: !hasLocalAvatar && !hasRemoteAvatar
                   ? Text(
                       member.displayName.isNotEmpty
                           ? member.displayName[0].toUpperCase()
@@ -103,7 +111,9 @@ class CheckInRecipientTile extends StatelessWidget {
               height: 26,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? const Color(0xFF81C784) : Colors.transparent,
+                color: isSelected
+                    ? const Color(0xFF81C784)
+                    : Colors.transparent,
                 border: Border.all(
                   color: isSelected ? const Color(0xFF81C784) : Colors.white38,
                   width: 2,

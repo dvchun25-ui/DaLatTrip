@@ -6,6 +6,7 @@ class UserProfile {
   final String email;
   final String username;
   final String displayName;
+  final String? avatarUrl;
   final String? avatarPath;
   final String? bio;
   final List<String> friends;
@@ -19,6 +20,7 @@ class UserProfile {
     required this.email,
     required this.username,
     required this.displayName,
+    this.avatarUrl,
     this.avatarPath,
     this.bio = 'Yêu du lịch Đà Lạt 🌲',
     this.friends = const [],
@@ -36,17 +38,26 @@ class UserProfile {
     }
 
     final emailVal = data['email']?.toString() ?? '';
-    final rawUsername = data['username']?.toString() ?? data['userId']?.toString() ?? '';
+    final rawUsername =
+        data['username']?.toString() ?? data['userId']?.toString() ?? '';
     final usernameVal = rawUsername.isNotEmpty
         ? rawUsername
-        : (emailVal.contains('@') ? emailVal.split('@').first : 'user_${docId.substring(0, 6)}');
+        : (emailVal.contains('@')
+              ? emailVal.split('@').first
+              : 'user_${docId.substring(0, 6)}');
+
+    final legacyPhotoUrl = data['photoUrl']?.toString();
+    final cloudAvatarUrl =
+        data['avatarUrl']?.toString() ??
+        ((legacyPhotoUrl?.startsWith('http') ?? false) ? legacyPhotoUrl : null);
 
     return UserProfile(
       uid: docId,
       email: emailVal,
       username: usernameVal,
       displayName: data['displayName']?.toString() ?? 'Người dùng DaLatTrip',
-      avatarPath: data['avatarPath']?.toString() ?? data['photoUrl']?.toString(),
+      avatarUrl: cloudAvatarUrl,
+      avatarPath: data['avatarPath']?.toString() ?? legacyPhotoUrl,
       bio: data['bio']?.toString() ?? 'Yêu du lịch Đà Lạt 🌲',
       friends: List<String>.from(data['friends'] ?? []),
       sentRequests: List<String>.from(data['sentRequests'] ?? []),
@@ -63,8 +74,9 @@ class UserProfile {
       'username': username,
       'userId': username, // legacy compatibility
       'displayName': displayName,
+      'avatarUrl': avatarUrl,
       'avatarPath': avatarPath,
-      'photoUrl': avatarPath,
+      'photoUrl': avatarUrl ?? avatarPath,
       'bio': bio,
       'friends': friends,
       'sentRequests': sentRequests,
@@ -78,6 +90,7 @@ class UserProfile {
     String? email,
     String? username,
     String? displayName,
+    String? avatarUrl,
     String? avatarPath,
     String? bio,
     List<String>? friends,
@@ -90,6 +103,7 @@ class UserProfile {
       email: email ?? this.email,
       username: username ?? this.username,
       displayName: displayName ?? this.displayName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       avatarPath: avatarPath ?? this.avatarPath,
       bio: bio ?? this.bio,
       friends: friends ?? this.friends,
@@ -99,4 +113,12 @@ class UserProfile {
       updatedAt: updatedAt ?? DateTime.now(),
     );
   }
+
+  String get preferredAvatar => (avatarUrl != null && avatarUrl!.isNotEmpty)
+      ? avatarUrl!
+      : (avatarPath ?? '');
+
+  String get photoUrl => preferredAvatar;
+
+  String get userId => username;
 }
